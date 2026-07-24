@@ -2,8 +2,9 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <!-- 加入 user-scalable=no 確保雙擊不會意外放大畫面，適合 App 體驗 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>信實集團 - 專業職安巡檢系統</title>
+    <title>信實集團 - 職安巡檢系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -16,105 +17,119 @@
             background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(16px);
             border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         }
-        #signaturePad { border: 2px dashed #94a3b8; border-radius: 0.5rem; width: 100%; height: 200px; touch-action: none; background-color: #f8fafc; }
+        /* 簽名板加高至 350px，並加上明顯圓角 */
+        #signaturePad { border: 2px dashed #94a3b8; border-radius: 1rem; width: 100%; height: 350px; touch-action: none; background-color: #f8fafc; }
         .hidden-smooth { display: none; opacity: 0; }
-        .show-smooth { display: block; opacity: 1; animation: fadeIn 0.3s; }
+        .show-smooth { display: flex; opacity: 1; animation: fadeIn 0.3s; }
+        .show-block { display: block; opacity: 1; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        #pdfExportContainer { 
-            position: absolute; left: -10000px; top: 0; width: 210mm; 
-            visibility: hidden; background: white; text-align: left; z-index: -1; 
-        }
+        #pdfExportContainer { position: absolute; left: -10000px; top: 0; width: 210mm; visibility: hidden; background: white; text-align: left; z-index: -1; }
         .pdf-page { width: 210mm; padding: 15mm; background: white; box-sizing: border-box; page-break-after: always; }
         .pdf-page:last-child { page-break-after: auto; }
         .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+        
+        /* 放大 Radio 按鈕 */
+        input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; }
     </style>
 </head>
-<body id="mainBody" class="app-bg min-h-screen flex items-center justify-center p-4">
+<body id="mainBody" class="app-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
 
-    <!-- 實體的 PDF 渲染容器 (離屏預載) -->
+    <!-- 實體的 PDF 渲染容器 -->
     <div id="pdfExportContainer"></div>
 
-    <button id="adminBtn" onclick="openAdminPanel()" class="absolute top-4 left-4 bg-slate-700 text-white px-3 py-1.5 rounded-lg text-sm shadow opacity-70 hover:opacity-100 transition">
+    <button id="adminBtn" onclick="openAdminPanel()" class="absolute top-4 left-4 bg-slate-700 text-white px-4 py-2 rounded-xl text-sm shadow opacity-80 hover:opacity-100 transition z-50">
         ⚙️ 後台管理
     </button>
 
     <!-- 登入區塊 -->
-    <div id="loginSection" class="glass-panel w-full max-w-md rounded-2xl p-8 transform transition-all">
+    <div id="loginSection" class="glass-panel w-full max-w-md rounded-2xl p-6 sm:p-8 transform transition-all mt-10 sm:mt-0">
         <div class="text-center mb-8">
-            <h1 class="text-2xl font-bold text-gray-800 flex items-center justify-center gap-3">
-                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-10 object-contain" crossorigin="anonymous">
-                <span class="text-blue-700">職安巡檢系統</span>
+            <h1 class="text-3xl font-extrabold text-gray-800 flex flex-col items-center justify-center gap-3 tracking-tight">
+                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-12 object-contain" crossorigin="anonymous">
+                <span class="text-blue-700 mt-2">職安巡檢系統</span>
             </h1>
         </div>
         <div class="space-y-6">
             <div>
-                <label class="block text-sm font-bold text-blue-800 mb-2">👤 員工姓名</label>
-                <input type="text" id="empName" placeholder="輸入中文姓名" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 outline-none">
+                <label class="block text-base font-bold text-blue-800 mb-2">👤 員工姓名</label>
+                <input type="text" id="empName" placeholder="輸入中文姓名" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <div>
-                <label class="block text-sm font-bold text-blue-800 mb-2">📅 出生年月日 (如 801230)</label>
-                <input type="text" id="empDob" placeholder="輸入 6 碼數字" maxlength="6" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 outline-none">
+                <label class="block text-base font-bold text-blue-800 mb-2">📅 出生年月日 (如 801230)</label>
+                <input type="text" id="empDob" placeholder="輸入 6 碼數字" maxlength="6" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
-            <button onclick="handleLogin()" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg">
+            <button onclick="handleLogin()" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg text-xl transition active:scale-95">
                 進入巡檢系統
             </button>
         </div>
     </div>
 
     <!-- 後台報表下載區塊 -->
-    <div id="adminSection" class="glass-panel w-full max-w-4xl rounded-2xl p-8 hidden max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-6 border-b-2 pb-4">
+    <div id="adminSection" class="glass-panel w-full max-w-4xl rounded-2xl p-6 sm:p-8 hidden max-h-[90vh] overflow-y-auto mt-10 sm:mt-0">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b-2 pb-4">
             <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-8" crossorigin="anonymous">
                 職安巡檢報表下載中心
             </h2>
-            <button onclick="closeAdminPanel()" class="text-red-500 font-bold hover:bg-red-50 px-3 py-1 rounded">關閉</button>
+            <button onclick="closeAdminPanel()" class="bg-red-50 text-red-600 font-bold hover:bg-red-100 px-5 py-2 rounded-xl border border-red-200 w-full sm:w-auto">關閉</button>
         </div>
-        <div class="flex gap-4 mb-6">
-            <input type="date" id="reportDate" class="px-4 py-2 border-2 border-gray-300 rounded-lg outline-none">
-            <button onclick="fetchReports()" class="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold">查詢當日紀錄</button>
+        <div class="flex flex-col sm:flex-row gap-4 mb-6">
+            <input type="date" id="reportDate" class="px-4 py-3 border-2 border-gray-300 rounded-xl outline-none text-lg w-full sm:w-auto">
+            <button onclick="fetchReports()" class="bg-slate-700 text-white px-6 py-3 rounded-xl font-bold text-lg w-full sm:w-auto active:scale-95">查詢當日紀錄</button>
         </div>
         
-        <div id="reportContent" class="bg-white p-6 rounded-lg border min-h-[200px] text-gray-700">
+        <div id="reportContent" class="bg-white p-4 sm:p-6 rounded-xl border min-h-[200px] text-gray-700">
             請選擇日期並點擊查詢。
         </div>
         
-        <button id="downloadPdfBtn" onclick="downloadAdminReport()" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg hidden shadow-lg transition">
+        <button id="downloadPdfBtn" onclick="downloadAdminReport()" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl hidden shadow-lg transition text-lg active:scale-95">
             ⬇️ 將查詢結果匯出為 PDF 報表
         </button>
     </div>
 
     <!-- 巡檢表單區塊 -->
-    <div id="formSection" class="glass-panel w-full max-w-3xl rounded-2xl p-8 hidden max-h-[95vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-6 border-b-2 border-gray-200 pb-4">
-            <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-8" crossorigin="anonymous">
+    <div id="formSection" class="glass-panel w-full max-w-3xl rounded-3xl p-5 sm:p-8 hidden max-h-[95vh] overflow-y-auto mt-10 sm:mt-0">
+        
+        <!-- 優化：標題與巡檢員顯示區塊 -->
+        <div class="flex flex-col gap-4 mb-6 border-b-2 border-gray-200 pb-5">
+            <h2 class="text-3xl font-extrabold text-gray-800 flex items-center justify-center sm:justify-start gap-3">
+                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-10" crossorigin="anonymous">
                 現場職安巡檢表
             </h2>
-            <span id="displayInspector" class="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm"></span>
+            <div class="flex items-center justify-center bg-blue-100/80 border border-blue-200 text-blue-900 px-5 py-3 rounded-xl text-lg font-bold shadow-sm w-full">
+                巡檢員：<span id="displayInspector" class="ml-1"></span>
+            </div>
         </div>
 
         <form id="inspectionForm" onsubmit="submitForm(event)" class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">巡檢日期</label>
-                    <input type="text" id="inspectDate" readonly class="w-full px-3 py-2.5 rounded-lg border-2 border-gray-200 bg-gray-100 font-bold">
+                    <label class="block text-base font-bold text-gray-800 mb-2">巡檢日期</label>
+                    <input type="text" id="inspectDate" readonly class="w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 bg-gray-100 font-bold text-lg">
                 </div>
+                
+                <!-- 優化：GPS 地圖顯示區塊 -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">📍 GPS 定位</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="gpsLocation" readonly placeholder="尚未取得定位" class="w-full px-3 py-2.5 rounded-lg border-2 border-gray-200 bg-gray-50 text-xs">
-                        <button type="button" onclick="getLocation()" class="bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap">重整</button>
+                    <label class="block text-base font-bold text-gray-800 mb-2">📍 GPS 定位與地圖</label>
+                    <div class="flex flex-col gap-3">
+                        <div class="flex gap-2">
+                            <input type="text" id="gpsLocation" readonly placeholder="尚未取得定位" class="w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 bg-gray-50 text-sm font-bold text-gray-600">
+                            <button type="button" onclick="getLocation()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3.5 rounded-xl text-base font-bold shadow-md transition whitespace-nowrap active:scale-95">定位</button>
+                        </div>
+                        <div id="mapContainer" class="hidden-smooth flex-col gap-2">
+                            <iframe id="mapFrame" class="w-full h-32 sm:h-40 rounded-xl border border-gray-300 shadow-sm" frameborder="0" scrolling="no"></iframe>
+                            <a id="mapLink" href="#" target="_blank" class="text-sm text-blue-600 font-bold hover:underline bg-blue-50 py-2 rounded-lg text-center border border-blue-100">🗺️ 開啟 Google 地圖 App</a>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
+            <div class="bg-blue-50/60 p-5 rounded-2xl border border-blue-100 space-y-5">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-2">航廈 (大項)</label>
-                        <select id="locationMajor" required class="w-full px-3 py-2.5 rounded-lg border-2 border-gray-200 outline-none bg-white">
+                        <label class="block text-base font-bold text-gray-800 mb-2">航廈 (大項)</label>
+                        <select id="locationMajor" required class="w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 outline-none bg-white text-lg font-medium">
                             <option value="">請選擇航廈...</option>
                             <option value="T1航廈">T1 航廈</option>
                             <option value="T2航廈">T2 航廈</option>
@@ -122,8 +137,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-2">區域 (小項)</label>
-                        <select id="locationMinor" required class="w-full px-3 py-2.5 rounded-lg border-2 border-gray-200 outline-none bg-white">
+                        <label class="block text-base font-bold text-gray-800 mb-2">區域 (小項)</label>
+                        <select id="locationMinor" required class="w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 outline-none bg-white text-lg font-medium">
                             <option value="">請選擇區域...</option>
                             <option value="管制區">管制區</option>
                             <option value="非管制區">非管制區</option>
@@ -131,15 +146,15 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">詳細巡檢位置 (可自行輸入)</label>
-                    <input type="text" id="locationDetail" required placeholder="例如：候機室南邊 至 南機坪 / 出境大廳報到櫃台前" class="w-full px-3 py-2.5 rounded-lg border-2 border-gray-200 bg-white outline-none">
+                    <label class="block text-base font-bold text-gray-800 mb-2">詳細巡檢位置 (可自行輸入)</label>
+                    <input type="text" id="locationDetail" required placeholder="例如：候機室南邊 至 南機坪" class="w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 bg-white outline-none text-lg">
                 </div>
             </div>
 
             <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2">作業項目</label>
-                <select id="taskType" required onchange="renderChecklist()" class="w-full px-3 py-2.5 rounded-lg border-2 border-gray-200 text-blue-900 font-bold outline-none bg-white">
-                    <option value="">請選擇作業項目...</option>
+                <label class="block text-base font-bold text-gray-800 mb-2">作業項目</label>
+                <select id="taskType" required onchange="renderChecklist()" class="w-full px-4 py-4 rounded-xl border-2 border-blue-300 text-blue-900 font-extrabold outline-none bg-white text-xl shadow-sm">
+                    <option value="">請選擇本次作業項目...</option>
                     <optgroup label="🟢 一般作業">
                         <option value="廁所/地面清潔">廁所/地面清潔</option>
                         <option value="洗地打蠟">洗地打蠟</option>
@@ -154,26 +169,27 @@
                 </select>
             </div>
 
-            <div id="checklistContainer" class="bg-gray-50 p-5 rounded-xl border border-gray-200 space-y-5 hidden-smooth">
-                <h3 class="font-bold text-gray-800 border-b-2 border-gray-200 pb-2">🛡️ 安全檢核項目</h3>
-                <div id="dynamicQuestions" class="space-y-6 mt-4"></div>
+            <div id="checklistContainer" class="bg-gray-50 p-4 sm:p-6 rounded-2xl border border-gray-200 space-y-6 hidden-smooth flex-col">
+                <h3 class="font-extrabold text-xl text-gray-800 border-b-2 border-gray-300 pb-3 flex items-center gap-2">🛡️ 安全檢核項目</h3>
+                <div id="dynamicQuestions" class="space-y-6 mt-2"></div>
                 
-                <div class="mt-6 border-t-2 border-gray-200 pt-4">
-                    <label class="block font-bold text-gray-800 mb-2">📸 現場整體巡檢照片 (可選多張)</label>
-                    <input type="file" id="generalPhoto" accept="image/*" multiple class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition">
-                    <div id="generalPhotoPreview" class="flex flex-wrap gap-2 mt-3"></div>
+                <div class="mt-8 border-t-2 border-gray-200 pt-6">
+                    <label class="block font-extrabold text-lg text-gray-800 mb-3">📸 現場整體巡檢照片 (可選多張)</label>
+                    <input type="file" id="generalPhoto" accept="image/*" multiple class="w-full text-base text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-blue-100 file:text-blue-800 hover:file:bg-blue-200 transition shadow-sm">
+                    <div id="generalPhotoPreview" class="flex flex-wrap gap-3 mt-4"></div>
                 </div>
             </div>
 
-            <div id="signatureSection" class="mt-8 bg-white p-4 rounded-xl border border-gray-200 shadow-sm hidden-smooth">
-                <label class="block font-bold text-gray-800 mb-3">巡檢人員簽名確認 <span class="text-red-500">*</span> <span class="text-xs text-red-600 font-bold">(⚠️ 必須簽署完整中文全名)</span></label>
+            <div id="signatureSection" class="mt-10 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-md hidden-smooth flex-col">
+                <label class="block font-extrabold text-xl text-gray-800 mb-2">巡檢人員簽名確認 <span class="text-red-500">*</span></label>
+                <p class="text-sm font-bold text-red-600 bg-red-50 py-1.5 px-3 rounded-lg inline-block mb-4">⚠️ 系統防呆：必須簽署完整中文全名</p>
                 <canvas id="signaturePad"></canvas>
-                <div class="flex justify-end mt-3">
-                    <button type="button" onclick="clearSignature()" class="text-sm bg-gray-200 px-4 py-1.5 rounded-lg font-bold">清除重簽</button>
+                <div class="flex justify-end mt-4">
+                    <button type="button" onclick="clearSignature()" class="text-base bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2.5 rounded-xl font-bold shadow-sm transition active:scale-95">清除重簽</button>
                 </div>
             </div>
 
-            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg text-lg hidden-smooth">
+            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-5 px-4 rounded-2xl shadow-xl text-xl hidden-smooth justify-center transition active:scale-95">
                 📤 傳送巡檢紀錄
             </button>
         </form>
@@ -207,7 +223,7 @@
                 compressImage(file, function(compressedBase64) {
                     generalPhotosList.push(compressedBase64);
                     const img = document.createElement('img'); img.src = compressedBase64;
-                    img.className = 'w-24 h-24 object-cover rounded shadow-sm border border-gray-300'; previewContainer.appendChild(img);
+                    img.className = 'w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-xl shadow-md border border-gray-300'; previewContainer.appendChild(img);
                 });
             });
         });
@@ -219,10 +235,25 @@
         }
 
         function getLocation() {
-            const gpsInput = document.getElementById('gpsLocation'); gpsInput.value = "定位中...";
+            const gpsInput = document.getElementById('gpsLocation'); 
+            const mapContainer = document.getElementById('mapContainer');
+            const mapFrame = document.getElementById('mapFrame');
+            const mapLink = document.getElementById('mapLink');
+            
+            gpsInput.value = "定位中...";
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    pos => { gpsInput.value = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`; },
+                    pos => { 
+                        const lat = pos.coords.latitude.toFixed(6);
+                        const lon = pos.coords.longitude.toFixed(6);
+                        gpsInput.value = `${lat}, ${lon}`; 
+                        
+                        mapFrame.src = `https://maps.google.com/maps?q=${lat},${lon}&z=16&output=embed`;
+                        mapLink.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+                        
+                        mapContainer.classList.remove('hidden-smooth');
+                        mapContainer.classList.add('show-smooth');
+                    },
                     err => { gpsInput.value = "定位失敗，請確認手機權限"; }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             }
@@ -231,7 +262,7 @@
         function handleLogin() {
             const name = document.getElementById('empName').value.trim(); const dob = document.getElementById('empDob').value.trim();
             if(name && /^\d{6}$/.test(dob)) {
-                document.getElementById('loginBtn').innerHTML = '🔄 核對人員清單中...'; document.getElementById('loginBtn').disabled = true;
+                document.getElementById('loginBtn').innerHTML = '🔄 核對中...'; document.getElementById('loginBtn').disabled = true;
                 fetch(`${GOOGLE_SCRIPT_URL}?action=checkStaff&name=${encodeURIComponent(name)}&dob=${dob}`)
                 .then(res => res.json()).then(authRes => {
                     if (authRes.status !== "success") {
@@ -241,7 +272,7 @@
                     fetch(GOOGLE_SCRIPT_URL).then(res => res.json()).then(data => {
                         questionData = data; currentUser = name;
                         document.getElementById('loginSection').classList.add('hidden'); document.getElementById('formSection').classList.remove('hidden');
-                        document.getElementById('displayInspector').textContent = `巡檢員：${name}`;
+                        document.getElementById('displayInspector').textContent = name;
                         setTodayDate(); getLocation(); resizeCanvas();
                         document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; document.getElementById('loginBtn').disabled = false;
                     });
@@ -259,16 +290,19 @@
             filteredQuestions.forEach((q, index) => {
                 const qId = q.id || `q${index + 1}`;
                 dq.insertAdjacentHTML('beforeend', `
-                    <div class="bg-white p-4 rounded-lg shadow border border-gray-100 question-block" data-qid="${qId}">
-                        <label class="block font-bold text-gray-800 mb-2"><span class="text-blue-600">[${q.category}]</span> ${q.item}</label>
-                        <p class="text-xs text-gray-500 mb-3 border-l-2 border-blue-400 pl-2">${q.standard}</p>
-                        <div class="flex gap-6 mb-2">
-                            <label class="flex items-center gap-2"><input type="radio" name="${qId}" value="正常" required onchange="toggleException('${qId}', false); checkCompletion();" class="w-4 h-4 text-blue-600"> <span class="font-bold text-green-700">正常</span></label>
-                            <label class="flex items-center gap-2"><input type="radio" name="${qId}" value="異常" onchange="toggleException('${qId}', true); checkCompletion();" class="w-4 h-4 text-red-600"> <span class="font-bold text-red-600">異常</span></label>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 question-block" data-qid="${qId}">
+                        <label class="block text-lg font-bold text-gray-900 mb-2 leading-snug"><span class="text-blue-600 mr-1">[${q.category}]</span> ${q.item}</label>
+                        <p class="text-sm sm:text-base text-gray-600 mb-5 border-l-4 border-blue-400 pl-3 leading-relaxed bg-blue-50/50 py-2 pr-2 rounded-r-lg">${q.standard}</p>
+                        
+                        <div class="flex gap-8 mb-2">
+                            <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="${qId}" value="正常" required onchange="toggleException('${qId}', false); checkCompletion();" class="text-blue-600"> <span class="text-lg font-extrabold text-green-700">正常</span></label>
+                            <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="${qId}" value="異常" onchange="toggleException('${qId}', true); checkCompletion();" class="text-red-600"> <span class="text-lg font-extrabold text-red-600">異常</span></label>
                         </div>
-                        <div id="${qId}_exception" class="hidden-smooth mt-3 p-3 bg-red-50 rounded-lg space-y-3">
-                            <input type="text" id="${qId}Note" placeholder="異常狀況說明 *" class="w-full px-3 py-2 text-sm rounded border border-gray-300">
-                            <input type="file" accept="image/*" capture="environment" onchange="handleExceptionPhoto('${qId}', this)" class="w-full text-xs text-gray-500">
+                        
+                        <div id="${qId}_exception" class="hidden-smooth flex-col mt-4 p-4 bg-red-50 border border-red-100 rounded-xl space-y-4">
+                            <input type="text" id="${qId}Note" placeholder="✍️ 異常狀況說明 *" class="w-full px-4 py-3 text-base rounded-lg border border-red-200 outline-none focus:border-red-400">
+                            <!-- 優化：移除 capture="environment"，支援相簿選擇 -->
+                            <input type="file" accept="image/*" onchange="handleExceptionPhoto('${qId}', this)" class="w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-white file:text-red-700 file:border file:border-red-200 hover:file:bg-red-100 shadow-sm cursor-pointer">
                             <div id="${qId}_photoPreview" class="mt-2 hidden-smooth"></div>
                         </div>
                     </div>
@@ -280,7 +314,7 @@
         function toggleException(qId, isAbnormal) {
             const el = document.getElementById(`${qId}_exception`); const noteInput = document.getElementById(`${qId}Note`);
             if (isAbnormal) { el.classList.add('show-smooth'); noteInput.setAttribute('required', 'true'); } 
-            else { el.classList.remove('show-smooth'); noteInput.removeAttribute('required'); noteInput.value = ''; uploadedPhotos[qId] = ''; document.getElementById(`${qId}_photoPreview`).classList.remove('show-smooth'); }
+            else { el.classList.remove('show-smooth'); noteInput.removeAttribute('required'); noteInput.value = ''; uploadedPhotos[qId] = ''; document.getElementById(`${qId}_photoPreview`).classList.remove('show-block'); }
         }
 
         function handleExceptionPhoto(qId, input) {
@@ -288,10 +322,10 @@
             if (input.files[0]) {
                 compressImage(input.files[0], function(base64) { 
                     uploadedPhotos[qId] = base64; 
-                    previewContainer.innerHTML = `<img src="${base64}" class="h-24 object-cover rounded border border-gray-300 shadow-sm">`;
-                    previewContainer.classList.remove('hidden-smooth'); previewContainer.classList.add('show-smooth');
+                    previewContainer.innerHTML = `<img src="${base64}" class="h-28 w-28 object-cover rounded-lg border border-red-200 shadow-sm">`;
+                    previewContainer.classList.remove('hidden-smooth'); previewContainer.classList.add('show-block');
                 });
-            } else { uploadedPhotos[qId] = ''; previewContainer.innerHTML = ''; previewContainer.classList.add('hidden-smooth'); }
+            } else { uploadedPhotos[qId] = ''; previewContainer.innerHTML = ''; previewContainer.classList.remove('show-block'); previewContainer.classList.add('hidden-smooth'); }
         }
 
         function checkCompletion() {
@@ -369,56 +403,37 @@
                     if(gpsStr.includes('query=')) { let match = gpsStr.match(/query=([^&"]+)/); if(match && match[1]) { latLon = match[1]; let parts = latLon.split(','); if(parts.length===2) { lat=parts[0].trim(); lon=parts[1].trim(); } } }
                     else if (gpsStr.includes(',')) { latLon = gpsStr.trim(); let parts = latLon.split(','); if(parts.length===2) { lat=parts[0].trim(); lon=parts[1].trim(); } }
                     
-                    // 🚀 核心升級：地圖圖片抓取 + QR Code 智慧備援
-                    let base64Map = '';
-                    let isQRCode = false;
+                    let base64Map = ''; let isQRCode = false;
                     if (lat && lon) {
                         try {
                             const rawOsmUrl = `staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=16&size=600x200&maptype=mapnik&markers=${lat},${lon},red-pushpin`;
                             const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(rawOsmUrl)}&output=jpg&q=80`;
-                            
-                            const controller = new AbortController();
-                            const timeoutId = setTimeout(() => controller.abort(), 6000); // 放寬至 6 秒
-                            const res = await fetch(proxyUrl, { signal: controller.signal });
-                            clearTimeout(timeoutId);
-                            
+                            const controller = new AbortController(); const timeoutId = setTimeout(() => controller.abort(), 6000); 
+                            const res = await fetch(proxyUrl, { signal: controller.signal }); clearTimeout(timeoutId);
                             if(res.ok) {
                                 const blob = await res.blob();
-                                base64Map = await new Promise((resolve) => {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => resolve(reader.result);
-                                    reader.readAsDataURL(blob);
-                                });
+                                base64Map = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); });
                             }
-                        } catch(e) { console.warn('地圖圖片抓取超時或失敗:', e); }
-
-                        // 💥 如果 6 秒內抓不到地圖，自動改抓 QR Code 作為備案 (保證 PDF 一定有東西看)
+                        } catch(e) {}
                         if (!base64Map) {
                             try {
-                                isQRCode = true;
-                                const gmapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+                                isQRCode = true; const gmapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
                                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gmapUrl)}`;
                                 const resQr = await fetch(qrUrl);
                                 if(resQr.ok) {
                                     const blobQr = await resQr.blob();
-                                    base64Map = await new Promise((resolve) => {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => resolve(reader.result);
-                                        reader.readAsDataURL(blobQr);
-                                    });
+                                    base64Map = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blobQr); });
                                 }
-                            } catch(e) { console.warn('QR Code 抓取失敗:', e); }
+                            } catch(e) {}
                         }
                     }
 
-                    // Web 版地圖 (iframe 互動)
                     let webMapHtml = '';
                     if (lat && lon) {
                         webMapHtml = `<p class="mt-2 text-xs font-bold text-gray-600 mb-1">📍 GPS 位置：${latLon} <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" class="text-blue-600 underline ml-2">🗺️ 開啟 Google 地圖</a></p>
                                       <iframe class="w-full h-40 rounded border border-gray-300 mt-2 shadow-sm" src="https://maps.google.com/maps?q=${lat},${lon}&z=16&output=embed" frameborder="0"></iframe>`;
                     }
 
-                    // PDF 版地圖渲染邏輯 (地圖圖片 vs QR Code 備援)
                     let pdfMapHtml = '';
                     if (base64Map) {
                         if (isQRCode) {
@@ -498,7 +513,6 @@
             }).catch(err => { document.getElementById('reportContent').innerHTML = '抓取失敗。'; });
         }
 
-        // 強制暫停渲染法 (Render Timeout)
         function downloadAdminReport() {
             const date = document.getElementById('reportDate').value;
             const btn = document.getElementById('downloadPdfBtn');
@@ -508,46 +522,27 @@
             const mainBody = document.getElementById('mainBody');
             
             btn.innerHTML = '🔄 PDF 產生準備中...';
-            
-            adminSection.style.display = 'none';
-            adminBtn.style.display = 'none';
-            
-            const originalClasses = mainBody.className;
-            mainBody.className = "bg-white m-0 p-0";
-            
-            pdfContainer.style.position = 'relative';
-            pdfContainer.style.left = '0';
-            pdfContainer.style.visibility = 'visible';
+            adminSection.style.display = 'none'; adminBtn.style.display = 'none';
+            const originalClasses = mainBody.className; mainBody.className = "bg-white m-0 p-0";
+            pdfContainer.style.position = 'relative'; pdfContainer.style.left = '0'; pdfContainer.style.visibility = 'visible';
 
             setTimeout(() => {
                 btn.innerHTML = '🔄 PDF 產出中，請勿關閉網頁...';
-                
                 const opt = {
-                    margin:       0, 
-                    filename:     `信實集團_職安巡檢日報表_${date}.pdf`, 
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true, logging: false }, 
-                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    margin: 0, filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false }, 
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
                 
                 html2pdf().set(opt).from(pdfContainer).save().then(() => {
-                    pdfContainer.style.position = 'absolute';
-                    pdfContainer.style.left = '-10000px';
-                    pdfContainer.style.visibility = 'hidden';
-                    
-                    mainBody.className = originalClasses;
-                    adminSection.style.display = 'block';
-                    adminBtn.style.display = 'block';
+                    pdfContainer.style.position = 'absolute'; pdfContainer.style.left = '-10000px'; pdfContainer.style.visibility = 'hidden';
+                    mainBody.className = originalClasses; adminSection.style.display = 'block'; adminBtn.style.display = 'block';
                     btn.innerHTML = '⬇️ 將查詢結果匯出為 PDF 報表';
                 }).catch(err => {
-                    pdfContainer.style.position = 'absolute';
-                    pdfContainer.style.left = '-10000px';
-                    pdfContainer.style.visibility = 'hidden';
-                    mainBody.className = originalClasses;
-                    adminSection.style.display = 'block';
-                    adminBtn.style.display = 'block';
-                    btn.innerHTML = '⬇️ 將查詢結果匯出為 PDF 報表';
-                    alert("PDF 產出過程發生錯誤，請重試。");
+                    pdfContainer.style.position = 'absolute'; pdfContainer.style.left = '-10000px'; pdfContainer.style.visibility = 'hidden';
+                    mainBody.className = originalClasses; adminSection.style.display = 'block'; adminBtn.style.display = 'block';
+                    btn.innerHTML = '⬇️ 將查詢結果匯出為 PDF 報表'; alert("PDF 產出過程發生錯誤，請重試。");
                 });
             }, 600); 
         }
