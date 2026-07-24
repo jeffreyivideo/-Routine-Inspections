@@ -2,7 +2,6 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <!-- 加入 user-scalable=no 確保雙擊不會意外放大畫面，適合 App 體驗 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>信實集團 - 職安巡檢系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,7 +16,6 @@
             background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(16px);
             border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         }
-        /* 簽名板加高至 350px，並加上明顯圓角 */
         #signaturePad { border: 2px dashed #94a3b8; border-radius: 1rem; width: 100%; height: 350px; touch-action: none; background-color: #f8fafc; }
         .hidden-smooth { display: none; opacity: 0; }
         .show-smooth { display: flex; opacity: 1; animation: fadeIn 0.3s; }
@@ -29,8 +27,8 @@
         .pdf-page:last-child { page-break-after: auto; }
         .avoid-break { page-break-inside: avoid; break-inside: avoid; }
         
-        /* 放大 Radio 按鈕 */
-        input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; }
+        /* 放大 Radio 按鈕與支援主題色 */
+        input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: #2563eb; }
     </style>
 </head>
 <body id="mainBody" class="app-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
@@ -65,18 +63,23 @@
         </div>
     </div>
 
-    <!-- 後台報表下載區塊 -->
-    <div id="adminSection" class="glass-panel w-full max-w-4xl rounded-2xl p-6 sm:p-8 hidden max-h-[90vh] overflow-y-auto mt-10 sm:mt-0">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b-2 pb-4">
-            <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-8" crossorigin="anonymous">
-                職安巡檢報表下載中心
+    <!-- 後台報表下載區塊 (優化排版) -->
+    <div id="adminSection" class="glass-panel w-full max-w-4xl rounded-2xl p-5 sm:p-8 hidden max-h-[90vh] overflow-y-auto mt-10 sm:mt-0">
+        
+        <!-- 標題與關閉按鈕 -->
+        <div class="flex justify-between items-center mb-5 border-b-2 border-gray-200 pb-4">
+            <h2 class="text-xl sm:text-2xl font-extrabold text-gray-800 flex items-center gap-2">
+                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-6 sm:h-8" crossorigin="anonymous">
+                職安巡檢報表
             </h2>
-            <button onclick="closeAdminPanel()" class="bg-red-50 text-red-600 font-bold hover:bg-red-100 px-5 py-2 rounded-xl border border-red-200 w-full sm:w-auto">關閉</button>
+            <!-- 關閉按鈕縮小 -->
+            <button onclick="closeAdminPanel()" class="bg-red-50 text-red-600 font-bold hover:bg-red-100 px-4 py-1.5 rounded-lg border border-red-200 text-sm whitespace-nowrap active:scale-95">關閉</button>
         </div>
-        <div class="flex flex-col sm:flex-row gap-4 mb-6">
-            <input type="date" id="reportDate" class="px-4 py-3 border-2 border-gray-300 rounded-xl outline-none text-lg w-full sm:w-auto">
-            <button onclick="fetchReports()" class="bg-slate-700 text-white px-6 py-3 rounded-xl font-bold text-lg w-full sm:w-auto active:scale-95">查詢當日紀錄</button>
+
+        <!-- 日期與查詢按鈕放在同一行 -->
+        <div class="flex flex-row gap-3 mb-6 bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <input type="date" id="reportDate" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg outline-none text-base sm:text-lg bg-white">
+            <button onclick="fetchReports()" class="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold text-base whitespace-nowrap active:scale-95 shadow-sm hover:bg-slate-800 transition">查詢紀錄</button>
         </div>
         
         <div id="reportContent" class="bg-white p-4 sm:p-6 rounded-xl border min-h-[200px] text-gray-700">
@@ -91,7 +94,6 @@
     <!-- 巡檢表單區塊 -->
     <div id="formSection" class="glass-panel w-full max-w-3xl rounded-3xl p-5 sm:p-8 hidden max-h-[95vh] overflow-y-auto mt-10 sm:mt-0">
         
-        <!-- 優化：標題與巡檢員顯示區塊 -->
         <div class="flex flex-col gap-4 mb-6 border-b-2 border-gray-200 pb-5">
             <h2 class="text-3xl font-extrabold text-gray-800 flex items-center justify-center sm:justify-start gap-3">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-10" crossorigin="anonymous">
@@ -108,8 +110,6 @@
                     <label class="block text-base font-bold text-gray-800 mb-2">巡檢日期</label>
                     <input type="text" id="inspectDate" readonly class="w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 bg-gray-100 font-bold text-lg">
                 </div>
-                
-                <!-- 優化：GPS 地圖顯示區塊 -->
                 <div>
                     <label class="block text-base font-bold text-gray-800 mb-2">📍 GPS 定位與地圖</label>
                     <div class="flex flex-col gap-3">
@@ -153,6 +153,7 @@
 
             <div>
                 <label class="block text-base font-bold text-gray-800 mb-2">作業項目</label>
+                <!-- 保留 optgroup 並加上 Emoji 清楚顯示分類 -->
                 <select id="taskType" required onchange="renderChecklist()" class="w-full px-4 py-4 rounded-xl border-2 border-blue-300 text-blue-900 font-extrabold outline-none bg-white text-xl shadow-sm">
                     <option value="">請選擇本次作業項目...</option>
                     <optgroup label="🟢 一般作業">
@@ -182,7 +183,7 @@
 
             <div id="signatureSection" class="mt-10 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-md hidden-smooth flex-col">
                 <label class="block font-extrabold text-xl text-gray-800 mb-2">巡檢人員簽名確認 <span class="text-red-500">*</span></label>
-                <p class="text-sm font-bold text-red-600 bg-red-50 py-1.5 px-3 rounded-lg inline-block mb-4">⚠️ 必須簽署完整中文全名</p>
+                <p class="text-sm font-bold text-red-600 bg-red-50 py-1.5 px-3 rounded-lg inline-block mb-4">⚠️必須簽署完整中文全名</p>
                 <canvas id="signaturePad"></canvas>
                 <div class="flex justify-end mt-4">
                     <button type="button" onclick="clearSignature()" class="text-base bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2.5 rounded-xl font-bold shadow-sm transition active:scale-95">清除重簽</button>
@@ -291,17 +292,19 @@
                 const qId = q.id || `q${index + 1}`;
                 dq.insertAdjacentHTML('beforeend', `
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 question-block" data-qid="${qId}">
-                        <label class="block text-lg font-bold text-gray-900 mb-2 leading-snug"><span class="text-blue-600 mr-1">[${q.category}]</span> ${q.item}</label>
-                        <p class="text-sm sm:text-base text-gray-600 mb-5 border-l-4 border-blue-400 pl-3 leading-relaxed bg-blue-50/50 py-2 pr-2 rounded-r-lg">${q.standard}</p>
+                        <!-- 檢查題目：放大為 text-xl -->
+                        <label class="block text-xl font-extrabold text-gray-900 mb-3 leading-snug"><span class="text-blue-600 mr-1">[${q.category}]</span> ${q.item}</label>
+                        <!-- 檢查標準：放大為 text-lg -->
+                        <p class="text-base sm:text-lg text-gray-600 mb-5 border-l-4 border-blue-400 pl-3 leading-relaxed bg-blue-50/50 py-2 pr-2 rounded-r-lg">${q.standard}</p>
                         
                         <div class="flex gap-8 mb-2">
-                            <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="${qId}" value="正常" required onchange="toggleException('${qId}', false); checkCompletion();" class="text-blue-600"> <span class="text-lg font-extrabold text-green-700">正常</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="${qId}" value="異常" onchange="toggleException('${qId}', true); checkCompletion();" class="text-red-600"> <span class="text-lg font-extrabold text-red-600">異常</span></label>
+                            <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="${qId}" value="正常" required onchange="toggleException('${qId}', false); checkCompletion();" class="text-blue-600"> <span class="text-xl font-extrabold text-green-700">正常</span></label>
+                            <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="${qId}" value="異常" onchange="toggleException('${qId}', true); checkCompletion();" class="text-red-600"> <span class="text-xl font-extrabold text-red-600">異常</span></label>
                         </div>
                         
                         <div id="${qId}_exception" class="hidden-smooth flex-col mt-4 p-4 bg-red-50 border border-red-100 rounded-xl space-y-4">
                             <input type="text" id="${qId}Note" placeholder="✍️ 異常狀況說明 *" class="w-full px-4 py-3 text-base rounded-lg border border-red-200 outline-none focus:border-red-400">
-                            <!-- 優化：移除 capture="environment"，支援相簿選擇 -->
+                            <!-- 支援相簿選取 -->
                             <input type="file" accept="image/*" onchange="handleExceptionPhoto('${qId}', this)" class="w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-white file:text-red-700 file:border file:border-red-200 hover:file:bg-red-100 shadow-sm cursor-pointer">
                             <div id="${qId}_photoPreview" class="mt-2 hidden-smooth"></div>
                         </div>
@@ -370,8 +373,8 @@
 
         const HEADER_TEMPLATE = `
             <div class="flex items-center justify-center gap-4 mb-4 border-b-2 border-gray-300 pb-3 avoid-break">
-                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-10 object-contain" crossorigin="anonymous">
-                <h3 class="font-bold text-2xl text-center text-gray-800">現場職安巡檢日報表</h3>
+                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-8 sm:h-10 object-contain" crossorigin="anonymous">
+                <h3 class="font-extrabold text-xl sm:text-2xl text-center text-gray-800 whitespace-nowrap">現場職安巡檢日報表</h3>
             </div>
         `;
 
@@ -430,8 +433,8 @@
 
                     let webMapHtml = '';
                     if (lat && lon) {
-                        webMapHtml = `<p class="mt-2 text-xs font-bold text-gray-600 mb-1">📍 GPS 位置：${latLon} <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" class="text-blue-600 underline ml-2">🗺️ 開啟 Google 地圖</a></p>
-                                      <iframe class="w-full h-40 rounded border border-gray-300 mt-2 shadow-sm" src="https://maps.google.com/maps?q=${lat},${lon}&z=16&output=embed" frameborder="0"></iframe>`;
+                        webMapHtml = `<p class="mt-2 text-sm font-bold text-blue-800 mb-1">📍 GPS 位置：${latLon} <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" class="text-blue-600 underline ml-2 text-xs bg-blue-50 px-2 py-1 rounded">🗺️ 開啟 Google 地圖</a></p>
+                                      <iframe class="w-full h-40 sm:h-48 rounded-lg border border-gray-300 mt-2 shadow-sm" src="https://maps.google.com/maps?q=${lat},${lon}&z=16&output=embed" frameborder="0"></iframe>`;
                     }
 
                     let pdfMapHtml = '';
@@ -454,15 +457,20 @@
                         }
                     }
 
-                    const basicInfo = `<div class="flex justify-between items-end mb-3"><p class="text-sm font-bold text-gray-700">巡檢日期：${date}</p><p class="text-xs text-gray-500">提交：${getVal(row, '提交時間')}</p></div>
-                                       <div class="bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200 text-sm">
-                                           <p><strong>[紀錄 ${i+1}] 巡檢員：</strong>${getVal(row, '巡檢人員')} | <strong>作業：</strong>${task}</p>
-                                           <p><strong>巡檢區域：</strong>${getVal(row, '航廈')||getVal(row, '大項區域')||''} - ${getVal(row, '區域')||getVal(row, '小項區域')||''} (${getVal(row, '詳細位置')||''})</p>
+                    // 優化網頁版報表卡片顯示
+                    const basicInfo = `<div class="flex justify-between items-center mb-3 border-b border-gray-200 pb-2">
+                                           <p class="text-sm font-bold text-gray-800">📅 ${date}</p>
+                                           <p class="text-xs text-gray-500">提交: ${getVal(row, '提交時間')}</p>
+                                       </div>
+                                       <div class="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200 text-base leading-relaxed">
+                                           <p class="mb-1"><span class="font-bold text-blue-800">👤 巡檢員：</span>${getVal(row, '巡檢人員')}</p>
+                                           <p class="mb-1"><span class="font-bold text-blue-800">🔧 作業：</span>${task}</p>
+                                           <p><span class="font-bold text-blue-800">📍 區域：</span>${getVal(row, '航廈')||getVal(row, '大項區域')||''} - ${getVal(row, '區域')||getVal(row, '小項區域')||''} <br><span class="text-gray-600 text-sm">(${getVal(row, '詳細位置')||''})</span></p>
                                        </div>`;
 
-                    webHtml += `<div class="mb-8 border border-gray-300 rounded shadow-sm bg-white p-6">
+                    webHtml += `<div class="mb-8 border border-gray-300 rounded-xl shadow-sm bg-white p-4 sm:p-6">
                                     ${HEADER_TEMPLATE}${basicInfo}${webMapHtml}
-                                    <h4 class="font-bold text-gray-800 text-sm border-b pb-1 mt-6 mb-3">📋 安全檢核項目：</h4>`;
+                                    <h4 class="font-extrabold text-gray-800 text-lg border-b pb-1 mt-6 mb-4 flex items-center gap-2">📋 安全檢核項目</h4>`;
                     
                     let currentPdfPage = `<div class="pdf-page">${HEADER_TEMPLATE}${basicInfo}${pdfMapHtml}<h4 class="font-bold text-gray-800 text-sm border-b pb-1 mt-4 mb-3">📋 安全檢核項目明細：</h4>`;
                     let spaceUsed = 0; let pageCapacity = 5; 
@@ -481,30 +489,52 @@
                             pageCapacity = 7; spaceUsed = 0; 
                         }
 
-                        let qBlock = `<div class="bg-gray-50 p-3 rounded border border-gray-200 text-xs mb-3 avoid-break">
+                        // 網頁版顯示優化
+                        let webQBlock = `<div class="bg-blue-50/30 p-4 rounded-xl border border-gray-200 text-base mb-4 avoid-break">
+                                        <p class="font-extrabold text-gray-900 text-lg mb-1"><span class="text-blue-600">[${q.category}]</span> ${q.item}</p>
+                                        <p class="text-gray-500 mb-3 text-sm border-l-2 border-blue-400 pl-2">${q.standard}</p>
+                                        <p class="text-base font-bold bg-white inline-block px-3 py-1 rounded border border-gray-200">檢查結果：<span class="${result==='異常'?'text-red-600':(result==='正常'?'text-green-600':'text-gray-500')}">${result}</span> ${note?` <span class="text-gray-600 text-sm font-normal ml-2">(說明：${note})</span>`:''}</p>`;
+                        if (pic && pic.startsWith('http')) webQBlock += `<div class="mt-3"><p class="text-red-600 font-bold mb-2 text-sm">🚨 異常照片：</p><img src="${pic}" class="h-40 object-contain rounded-lg border border-gray-300 shadow-sm" crossorigin="anonymous"></div>`;
+                        webQBlock += `</div>`;
+
+                        // PDF版顯示
+                        let pdfQBlock = `<div class="bg-gray-50 p-3 rounded border border-gray-200 text-xs mb-3 avoid-break">
                                         <p class="font-bold text-gray-800 text-sm">[${q.category}] ${q.item}</p>
                                         <p class="text-gray-500 mb-1">${q.standard}</p>
                                         <p class="text-sm">檢查結果：<span class="${result==='異常'?'text-red-600 font-bold':(result==='正常'?'text-green-600 font-bold':'text-gray-500 font-bold')}">${result}</span> ${note?`(說明：${note})`:''}</p>`;
-                        if (pic && pic.startsWith('http')) qBlock += `<div class="mt-2 pt-2 border-t border-gray-200"><p class="text-red-600 font-bold mb-1 text-xs">🚨 異常照片：</p><img src="${pic}" class="h-32 object-contain rounded border border-gray-300 shadow-sm" crossorigin="anonymous"></div>`;
-                        qBlock += `</div>`;
+                        if (pic && pic.startsWith('http')) pdfQBlock += `<div class="mt-2 pt-2 border-t border-gray-200"><p class="text-red-600 font-bold mb-1 text-xs">🚨 異常照片：</p><img src="${pic}" class="h-32 object-contain rounded border border-gray-300 shadow-sm" crossorigin="anonymous"></div>`;
+                        pdfQBlock += `</div>`;
 
-                        webHtml += qBlock; currentPdfPage += qBlock; spaceUsed += itemCost;
+                        webHtml += webQBlock; currentPdfPage += pdfQBlock; spaceUsed += itemCost;
                     });
 
                     let overallPics = getVal(row, '現場整體照片'); let sigPic = getVal(row, '簽名檔');
-                    let footerBlock = `<div class="mt-6 avoid-break"><p class="font-bold text-gray-800 text-sm mb-2">📸 現場整體照片:</p>`;
+                    let footerBlock = `<div class="mt-8 avoid-break"><p class="font-extrabold text-gray-800 text-lg mb-3">📸 現場整體照片:</p>`;
                     if (overallPics) {
-                        footerBlock += `<div class="flex flex-wrap gap-2">`;
-                        overallPics.split('\n').forEach(url => { if(url.startsWith('http')) footerBlock += `<img src="${url}" class="h-32 w-32 object-cover rounded shadow-sm border border-gray-300" crossorigin="anonymous">`; });
+                        footerBlock += `<div class="flex flex-wrap gap-3">`;
+                        overallPics.split('\n').forEach(url => { if(url.startsWith('http')) footerBlock += `<img src="${url}" class="h-32 w-32 object-cover rounded-xl shadow-sm border border-gray-300" crossorigin="anonymous">`; });
                         footerBlock += `</div>`;
-                    } else footerBlock += `<p class="text-xs text-gray-500">無</p>`;
-                    footerBlock += `</div><div class="border-t-2 border-gray-300 pt-4 mt-6 flex flex-col items-end gap-2 avoid-break"><p class="font-bold text-gray-800 text-sm">巡檢人員簽名確認:</p>`;
-                    if (sigPic && sigPic.startsWith('http')) footerBlock += `<img src="${sigPic}" class="h-16 object-contain" crossorigin="anonymous">`;
+                    } else footerBlock += `<p class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded inline-block">無</p>`;
+                    
+                    footerBlock += `</div><div class="border-t-2 border-gray-300 pt-5 mt-8 flex flex-col items-end gap-3 avoid-break"><p class="font-extrabold text-gray-800 text-lg">巡檢人員簽名確認:</p>`;
+                    if (sigPic && sigPic.startsWith('http')) footerBlock += `<img src="${sigPic}" class="h-24 object-contain bg-white border border-gray-200 p-2 rounded-xl" crossorigin="anonymous">`;
                     footerBlock += `</div>`;
 
                     webHtml += footerBlock + `</div>`; 
                     if (spaceUsed > 4) { currentPdfPage += `</div>`; globalPdfHtml += currentPdfPage; currentPdfPage = `<div class="pdf-page">${HEADER_TEMPLATE}`; }
-                    currentPdfPage += footerBlock + `</div>`; globalPdfHtml += currentPdfPage; 
+                    
+                    // PDF footer is slightly different for formatting
+                    let pdfFooterBlock = `<div class="mt-6 avoid-break"><p class="font-bold text-gray-800 text-sm mb-2">📸 現場整體照片:</p>`;
+                    if (overallPics) {
+                        pdfFooterBlock += `<div class="flex flex-wrap gap-2">`;
+                        overallPics.split('\n').forEach(url => { if(url.startsWith('http')) pdfFooterBlock += `<img src="${url}" class="h-32 w-32 object-cover rounded shadow-sm border border-gray-300" crossorigin="anonymous">`; });
+                        pdfFooterBlock += `</div>`;
+                    } else pdfFooterBlock += `<p class="text-xs text-gray-500">無</p>`;
+                    pdfFooterBlock += `</div><div class="border-t-2 border-gray-300 pt-4 mt-6 flex flex-col items-end gap-2 avoid-break"><p class="font-bold text-gray-800 text-sm">巡檢人員簽名確認:</p>`;
+                    if (sigPic && sigPic.startsWith('http')) pdfFooterBlock += `<img src="${sigPic}" class="h-16 object-contain" crossorigin="anonymous">`;
+                    pdfFooterBlock += `</div>`;
+
+                    currentPdfPage += pdfFooterBlock + `</div>`; globalPdfHtml += currentPdfPage; 
                 }
                 
                 document.getElementById('reportContent').innerHTML = webHtml;
