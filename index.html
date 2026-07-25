@@ -27,8 +27,11 @@
         .pdf-page:last-child { page-break-after: auto; }
         .avoid-break { page-break-inside: avoid; break-inside: avoid; }
         
-        /* 放大 Radio 按鈕與支援主題色 */
         input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: #2563eb; }
+        
+        /* 針對下拉選單群組的樣式強化 */
+        select optgroup { font-weight: 900; font-size: 1.1rem; }
+        select option { font-weight: 500; font-size: 1rem; color: #1f2937; }
     </style>
 </head>
 <body id="mainBody" class="app-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
@@ -51,11 +54,13 @@
         <div class="space-y-6">
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">👤 員工姓名</label>
-                <input type="text" id="empName" placeholder="輸入中文姓名" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
+                <!-- 防呆：只能輸入中文 -->
+                <input type="text" id="empName" placeholder="輸入中文姓名" oninput="this.value = this.value.replace(/[^\u4E00-\u9FA5]/g, '');" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">📅 出生年月日 (如 801230)</label>
-                <input type="text" id="empDob" placeholder="輸入 6 碼數字" maxlength="6" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
+                <!-- 防呆：只能輸入數字 -->
+                <input type="text" id="empDob" placeholder="輸入 6 碼數字" maxlength="6" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '');" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <button onclick="handleLogin()" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg text-xl transition active:scale-95">
                 進入巡檢系統
@@ -63,20 +68,16 @@
         </div>
     </div>
 
-    <!-- 後台報表下載區塊 (優化排版) -->
+    <!-- 後台報表下載區塊 -->
     <div id="adminSection" class="glass-panel w-full max-w-4xl rounded-2xl p-5 sm:p-8 hidden max-h-[90vh] overflow-y-auto mt-10 sm:mt-0">
-        
-        <!-- 標題與關閉按鈕 -->
         <div class="flex justify-between items-center mb-5 border-b-2 border-gray-200 pb-4">
             <h2 class="text-xl sm:text-2xl font-extrabold text-gray-800 flex items-center gap-2">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-6 sm:h-8" crossorigin="anonymous">
                 職安巡檢報表
             </h2>
-            <!-- 關閉按鈕縮小 -->
             <button onclick="closeAdminPanel()" class="bg-red-50 text-red-600 font-bold hover:bg-red-100 px-4 py-1.5 rounded-lg border border-red-200 text-sm whitespace-nowrap active:scale-95">關閉</button>
         </div>
 
-        <!-- 日期與查詢按鈕放在同一行 -->
         <div class="flex flex-row gap-3 mb-6 bg-gray-50 p-3 rounded-xl border border-gray-200">
             <input type="date" id="reportDate" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg outline-none text-base sm:text-lg bg-white">
             <button onclick="fetchReports()" class="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold text-base whitespace-nowrap active:scale-95 shadow-sm hover:bg-slate-800 transition">查詢紀錄</button>
@@ -125,6 +126,16 @@
                 </div>
             </div>
 
+            <!-- 自動氣象與熱危害資訊區塊 (預設隱藏，定位後顯示) -->
+            <div id="weatherBlock" class="hidden-smooth flex-col mt-2 bg-blue-50 border border-blue-200 rounded-2xl p-4 shadow-sm">
+                <div class="flex items-center gap-2 mb-3">
+                    <h4 class="font-extrabold text-blue-800 text-lg">🌤️ 現場氣象與熱危害資訊</h4>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-dashed border-blue-300 text-base space-y-2 shadow-sm" id="weatherInfo">
+                    <p class="text-gray-500 font-bold text-center">🔄 氣象資料讀取中...</p>
+                </div>
+            </div>
+
             <div class="bg-blue-50/60 p-5 rounded-2xl border border-blue-100 space-y-5">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
@@ -153,15 +164,16 @@
 
             <div>
                 <label class="block text-base font-bold text-gray-800 mb-2">作業項目</label>
-                <!-- 保留 optgroup 並加上 Emoji 清楚顯示分類 -->
+                <!-- 優化選單文字與顏色分類 -->
                 <select id="taskType" required onchange="renderChecklist()" class="w-full px-4 py-4 rounded-xl border-2 border-blue-300 text-blue-900 font-extrabold outline-none bg-white text-xl shadow-sm">
-                    <option value="">請選擇本次作業項目...</option>
-                    <optgroup label="🟢 一般作業">
+                    <option value="" class="text-gray-500">請選擇本次作業項目...</option>
+                    <optgroup label="🟢 一般作業" style="color: #15803d; background-color: #f0fdf4;">
                         <option value="廁所/地面清潔">廁所/地面清潔</option>
                         <option value="洗地打蠟">洗地打蠟</option>
                         <option value="玻璃與設施除塵">玻璃與設施除塵</option>
+                        <option value="其他清潔作業">其他清潔作業</option>
                     </optgroup>
-                    <optgroup label="🔴 高風險作業">
+                    <optgroup label="🔴 高風險作業" style="color: #b91c1c; background-color: #fef2f2;">
                         <option value="高處作業(A字梯)">高處作業 (A字梯)</option>
                         <option value="高空工作車/升降平台">高空工作車/升降平台</option>
                         <option value="吊籠作業">吊籠作業</option>
@@ -183,7 +195,7 @@
 
             <div id="signatureSection" class="mt-10 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-md hidden-smooth flex-col">
                 <label class="block font-extrabold text-xl text-gray-800 mb-2">巡檢人員簽名確認 <span class="text-red-500">*</span></label>
-                <p class="text-sm font-bold text-red-600 bg-red-50 py-1.5 px-3 rounded-lg inline-block mb-4">⚠️必須簽署完整中文全名</p>
+                <p class="text-sm font-bold text-red-600 bg-red-50 py-1.5 px-3 rounded-lg inline-block mb-4">⚠️ 必須簽署完整中文全名</p>
                 <canvas id="signaturePad"></canvas>
                 <div class="flex justify-end mt-4">
                     <button type="button" onclick="clearSignature()" class="text-base bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2.5 rounded-xl font-bold shadow-sm transition active:scale-95">清除重簽</button>
@@ -235,6 +247,36 @@
             document.getElementById('reportDate').value = document.getElementById('inspectDate').value;
         }
 
+        // 自動抓取氣象與熱危害資訊
+        async function fetchWeather(lat, lon) {
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FTaipei`);
+                const data = await res.json();
+                const current = data.current;
+                const temp = current.temperature_2m;
+                const hum = current.relative_humidity_2m;
+                const heatIndex = current.apparent_temperature;
+                const wind = current.wind_speed_10m;
+
+                let heatLevel = "一般注意";
+                let heatColor = "text-yellow-600";
+                if(heatIndex >= 32 && heatIndex < 38) { heatLevel = "第二級：格外注意"; heatColor = "text-orange-500"; }
+                else if(heatIndex >= 38 && heatIndex < 54) { heatLevel = "第三級：危險"; heatColor = "text-red-500"; }
+                else if(heatIndex >= 54) { heatLevel = "第四級：極度危險"; heatColor = "text-purple-600"; }
+
+                document.getElementById('weatherInfo').innerHTML = `
+                    <p class="font-bold text-gray-700">🌡️ 實際溫度：<span class="font-normal">${temp}°C</span> / 濕度：<span class="font-normal">${hum}%</span></p>
+                    <p class="font-bold text-gray-700">🔥 換算熱指數：<span class="${heatColor} font-extrabold text-lg">${heatIndex} (${heatLevel})</span></p>
+                    <p class="font-bold text-gray-700">💨 現場陣風風速：<span class="font-normal">${wind} m/s</span></p>
+                `;
+                document.getElementById('weatherBlock').classList.remove('hidden-smooth');
+                document.getElementById('weatherBlock').classList.add('show-smooth');
+            } catch(e) {
+                console.warn("Weather API fetch error:", e);
+                document.getElementById('weatherInfo').innerHTML = `<p class="text-red-500 font-bold">⚠️ 無法取得即時氣象資訊</p>`;
+            }
+        }
+
         function getLocation() {
             const gpsInput = document.getElementById('gpsLocation'); 
             const mapContainer = document.getElementById('mapContainer');
@@ -254,6 +296,9 @@
                         
                         mapContainer.classList.remove('hidden-smooth');
                         mapContainer.classList.add('show-smooth');
+                        
+                        // 呼叫氣象 API
+                        fetchWeather(lat, lon);
                     },
                     err => { gpsInput.value = "定位失敗，請確認手機權限"; }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
@@ -292,9 +337,7 @@
                 const qId = q.id || `q${index + 1}`;
                 dq.insertAdjacentHTML('beforeend', `
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 question-block" data-qid="${qId}">
-                        <!-- 檢查題目：放大為 text-xl -->
                         <label class="block text-xl font-extrabold text-gray-900 mb-3 leading-snug"><span class="text-blue-600 mr-1">[${q.category}]</span> ${q.item}</label>
-                        <!-- 檢查標準：放大為 text-lg -->
                         <p class="text-base sm:text-lg text-gray-600 mb-5 border-l-4 border-blue-400 pl-3 leading-relaxed bg-blue-50/50 py-2 pr-2 rounded-r-lg">${q.standard}</p>
                         
                         <div class="flex gap-8 mb-2">
@@ -304,7 +347,6 @@
                         
                         <div id="${qId}_exception" class="hidden-smooth flex-col mt-4 p-4 bg-red-50 border border-red-100 rounded-xl space-y-4">
                             <input type="text" id="${qId}Note" placeholder="✍️ 異常狀況說明 *" class="w-full px-4 py-3 text-base rounded-lg border border-red-200 outline-none focus:border-red-400">
-                            <!-- 支援相簿選取 -->
                             <input type="file" accept="image/*" onchange="handleExceptionPhoto('${qId}', this)" class="w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-white file:text-red-700 file:border file:border-red-200 hover:file:bg-red-100 shadow-sm cursor-pointer">
                             <div id="${qId}_photoPreview" class="mt-2 hidden-smooth"></div>
                         </div>
@@ -374,15 +416,29 @@
         const HEADER_TEMPLATE = `
             <div class="flex items-center justify-center gap-4 mb-4 border-b-2 border-gray-300 pb-3 avoid-break">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-8 sm:h-10 object-contain" crossorigin="anonymous">
-                <h3 class="font-extrabold text-xl sm:text-2xl text-center text-gray-800 whitespace-nowrap">現場職安巡檢日報表</h3>
+                <h3 class="font-extrabold text-2xl sm:text-2xl text-center text-gray-800 whitespace-nowrap">現場職安巡檢日報表</h3>
             </div>
         `;
 
         function openAdminPanel() {
             const pwd = prompt("請輸入管理員密碼：");
-            if (pwd === "1234") { document.getElementById('loginSection').classList.add('hidden'); document.getElementById('adminSection').classList.remove('hidden'); setTodayDate(); } else if (pwd !== null) alert("密碼錯誤！");
+            if (pwd === "1234") { 
+                // 修正雙框架：確保開啟後台時，登入與表單區塊完全隱藏
+                document.getElementById('loginSection').classList.add('hidden'); 
+                document.getElementById('formSection').classList.add('hidden'); 
+                document.getElementById('adminSection').classList.remove('hidden'); 
+                setTodayDate(); 
+            } else if (pwd !== null) alert("密碼錯誤！");
         }
-        function closeAdminPanel() { document.getElementById('adminSection').classList.add('hidden'); document.getElementById('loginSection').classList.remove('hidden'); }
+        function closeAdminPanel() { 
+            // 修正雙框架：依據是否有登入者，決定顯示登入或表單
+            document.getElementById('adminSection').classList.add('hidden'); 
+            if(currentUser) {
+                document.getElementById('formSection').classList.remove('hidden');
+            } else {
+                document.getElementById('loginSection').classList.remove('hidden'); 
+            }
+        }
 
         function fetchReports() {
             const date = document.getElementById('reportDate').value; if (!date) return;
@@ -457,10 +513,10 @@
                         }
                     }
 
-                    // 優化網頁版報表卡片顯示
-                    const basicInfo = `<div class="flex justify-between items-center mb-3 border-b border-gray-200 pb-2">
-                                           <p class="text-sm font-bold text-gray-800">📅 ${date}</p>
-                                           <p class="text-xs text-gray-500">提交: ${getVal(row, '提交時間')}</p>
+                    // 優化：報表日期與提交時間分上下兩行顯示
+                    const basicInfo = `<div class="mb-4 border-b-2 border-gray-200 pb-4">
+                                           <p class="text-lg sm:text-xl font-extrabold text-gray-800 mb-1">📅 巡檢日期：${date}</p>
+                                           <p class="text-sm text-gray-500 font-medium">⏱️ 提交時間：${getVal(row, '提交時間')}</p>
                                        </div>
                                        <div class="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200 text-base leading-relaxed">
                                            <p class="mb-1"><span class="font-bold text-blue-800">👤 巡檢員：</span>${getVal(row, '巡檢人員')}</p>
@@ -489,7 +545,6 @@
                             pageCapacity = 7; spaceUsed = 0; 
                         }
 
-                        // 網頁版顯示優化
                         let webQBlock = `<div class="bg-blue-50/30 p-4 rounded-xl border border-gray-200 text-base mb-4 avoid-break">
                                         <p class="font-extrabold text-gray-900 text-lg mb-1"><span class="text-blue-600">[${q.category}]</span> ${q.item}</p>
                                         <p class="text-gray-500 mb-3 text-sm border-l-2 border-blue-400 pl-2">${q.standard}</p>
@@ -497,7 +552,6 @@
                         if (pic && pic.startsWith('http')) webQBlock += `<div class="mt-3"><p class="text-red-600 font-bold mb-2 text-sm">🚨 異常照片：</p><img src="${pic}" class="h-40 object-contain rounded-lg border border-gray-300 shadow-sm" crossorigin="anonymous"></div>`;
                         webQBlock += `</div>`;
 
-                        // PDF版顯示
                         let pdfQBlock = `<div class="bg-gray-50 p-3 rounded border border-gray-200 text-xs mb-3 avoid-break">
                                         <p class="font-bold text-gray-800 text-sm">[${q.category}] ${q.item}</p>
                                         <p class="text-gray-500 mb-1">${q.standard}</p>
@@ -523,7 +577,6 @@
                     webHtml += footerBlock + `</div>`; 
                     if (spaceUsed > 4) { currentPdfPage += `</div>`; globalPdfHtml += currentPdfPage; currentPdfPage = `<div class="pdf-page">${HEADER_TEMPLATE}`; }
                     
-                    // PDF footer is slightly different for formatting
                     let pdfFooterBlock = `<div class="mt-6 avoid-break"><p class="font-bold text-gray-800 text-sm mb-2">📸 現場整體照片:</p>`;
                     if (overallPics) {
                         pdfFooterBlock += `<div class="flex flex-wrap gap-2">`;
