@@ -29,14 +29,13 @@
         
         input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: #2563eb; }
         
-        /* 針對下拉選單群組的樣式強化 */
-        select optgroup { font-weight: 900; font-size: 1.1rem; }
-        select option { font-weight: 500; font-size: 1rem; color: #1f2937; }
+        /* 針對下拉選單群組的樣式大幅強化 */
+        select optgroup { font-weight: 900; font-size: 1.25rem; }
+        select option { font-weight: 700; font-size: 1.1rem; }
     </style>
 </head>
 <body id="mainBody" class="app-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
 
-    <!-- 實體的 PDF 渲染容器 -->
     <div id="pdfExportContainer"></div>
 
     <button id="adminBtn" onclick="openAdminPanel()" class="absolute top-4 left-4 bg-slate-700 text-white px-4 py-2 rounded-xl text-sm shadow opacity-80 hover:opacity-100 transition z-50">
@@ -54,12 +53,10 @@
         <div class="space-y-6">
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">👤 員工姓名</label>
-                <!-- 防呆：只能輸入中文 -->
                 <input type="text" id="empName" placeholder="輸入中文姓名" oninput="this.value = this.value.replace(/[^\u4E00-\u9FA5]/g, '');" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">📅 出生年月日 (如 801230)</label>
-                <!-- 防呆：只能輸入數字 -->
                 <input type="text" id="empDob" placeholder="輸入 6 碼數字" maxlength="6" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '');" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <button onclick="handleLogin()" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg text-xl transition active:scale-95">
@@ -126,7 +123,7 @@
                 </div>
             </div>
 
-            <!-- 自動氣象與熱危害資訊區塊 (預設隱藏，定位後顯示) -->
+            <!-- 自動氣象與熱危害資訊區塊 -->
             <div id="weatherBlock" class="hidden-smooth flex-col mt-2 bg-blue-50 border border-blue-200 rounded-2xl p-4 shadow-sm">
                 <div class="flex items-center gap-2 mb-3">
                     <h4 class="font-extrabold text-blue-800 text-lg">🌤️ 現場氣象與熱危害資訊</h4>
@@ -167,17 +164,17 @@
                 <!-- 優化選單文字與顏色分類 -->
                 <select id="taskType" required onchange="renderChecklist()" class="w-full px-4 py-4 rounded-xl border-2 border-blue-300 text-blue-900 font-extrabold outline-none bg-white text-xl shadow-sm">
                     <option value="" class="text-gray-500">請選擇本次作業項目...</option>
-                    <optgroup label="🟢 一般作業" style="color: #15803d; background-color: #f0fdf4;">
-                        <option value="廁所/地面清潔">廁所/地面清潔</option>
-                        <option value="洗地打蠟">洗地打蠟</option>
-                        <option value="玻璃與設施除塵">玻璃與設施除塵</option>
-                        <option value="其他清潔作業">其他清潔作業</option>
+                    <optgroup label="🟢 ━━ 一般作業 ━━" style="color: #15803d; font-size: 1.25rem;">
+                        <option value="廁所/地面清潔" style="color: #15803d;">廁所/地面清潔</option>
+                        <option value="洗地打蠟" style="color: #15803d;">洗地打蠟</option>
+                        <option value="玻璃與設施除塵" style="color: #15803d;">玻璃與設施除塵</option>
+                        <option value="其他清潔作業" style="color: #15803d;">其他清潔作業</option>
                     </optgroup>
-                    <optgroup label="🔴 高風險作業" style="color: #b91c1c; background-color: #fef2f2;">
-                        <option value="高處作業(A字梯)">高處作業 (A字梯)</option>
-                        <option value="高空工作車/升降平台">高空工作車/升降平台</option>
-                        <option value="吊籠作業">吊籠作業</option>
-                        <option value="臨路作業">臨路作業</option>
+                    <optgroup label="🔴 ━━ 高風險作業 ━━" style="color: #b91c1c; font-size: 1.25rem;">
+                        <option value="高處作業(A字梯)" style="color: #b91c1c;">高處作業 (A字梯)</option>
+                        <option value="高空工作車/升降平台" style="color: #b91c1c;">高空工作車/升降平台</option>
+                        <option value="吊籠作業" style="color: #b91c1c;">吊籠作業</option>
+                        <option value="臨路作業" style="color: #b91c1c;">臨路作業</option>
                     </optgroup>
                 </select>
             </div>
@@ -213,7 +210,7 @@
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzkVb8Gtg1IgGi-qP8A6HtClBzetZf2uXiqdKco11ueU_yqfQPRbuwhsNs1WKFWDZEH/exec'; 
         
         let currentUser = ''; let uploadedPhotos = {}; let questionData = []; let generalPhotosList = []; 
-        let globalPdfHtml = '';
+        let globalPdfHtml = ''; let currentWeatherData = null;
 
         function compressImage(file, callback) {
             const reader = new FileReader();
@@ -247,7 +244,6 @@
             document.getElementById('reportDate').value = document.getElementById('inspectDate').value;
         }
 
-        // 自動抓取氣象與熱危害資訊
         async function fetchWeather(lat, lon) {
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FTaipei`);
@@ -258,11 +254,13 @@
                 const heatIndex = current.apparent_temperature;
                 const wind = current.wind_speed_10m;
 
-                let heatLevel = "一般注意";
-                let heatColor = "text-yellow-600";
+                let heatLevel = "一般注意"; let heatColor = "text-yellow-600";
                 if(heatIndex >= 32 && heatIndex < 38) { heatLevel = "第二級：格外注意"; heatColor = "text-orange-500"; }
                 else if(heatIndex >= 38 && heatIndex < 54) { heatLevel = "第三級：危險"; heatColor = "text-red-500"; }
                 else if(heatIndex >= 54) { heatLevel = "第四級：極度危險"; heatColor = "text-purple-600"; }
+
+                // 儲存氣象資料供送出時打包寫入報表
+                currentWeatherData = { temp, hum, heatIndex, heatLevel, heatColor, wind };
 
                 document.getElementById('weatherInfo').innerHTML = `
                     <p class="font-bold text-gray-700">🌡️ 實際溫度：<span class="font-normal">${temp}°C</span> / 濕度：<span class="font-normal">${hum}%</span></p>
@@ -272,7 +270,7 @@
                 document.getElementById('weatherBlock').classList.remove('hidden-smooth');
                 document.getElementById('weatherBlock').classList.add('show-smooth');
             } catch(e) {
-                console.warn("Weather API fetch error:", e);
+                console.warn("Weather API error:", e);
                 document.getElementById('weatherInfo').innerHTML = `<p class="text-red-500 font-bold">⚠️ 無法取得即時氣象資訊</p>`;
             }
         }
@@ -287,17 +285,11 @@
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     pos => { 
-                        const lat = pos.coords.latitude.toFixed(6);
-                        const lon = pos.coords.longitude.toFixed(6);
+                        const lat = pos.coords.latitude.toFixed(6); const lon = pos.coords.longitude.toFixed(6);
                         gpsInput.value = `${lat}, ${lon}`; 
-                        
                         mapFrame.src = `https://maps.google.com/maps?q=${lat},${lon}&z=16&output=embed`;
                         mapLink.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-                        
-                        mapContainer.classList.remove('hidden-smooth');
-                        mapContainer.classList.add('show-smooth');
-                        
-                        // 呼叫氣象 API
+                        mapContainer.classList.remove('hidden-smooth'); mapContainer.classList.add('show-smooth');
                         fetchWeather(lat, lon);
                     },
                     err => { gpsInput.value = "定位失敗，請確認手機權限"; }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -399,6 +391,11 @@
                 const qId = block.getAttribute('data-qid');
                 answersObj[qId] = document.querySelector(`input[name="${qId}"]:checked`)?.value || ''; notesObj[qId] = document.getElementById(`${qId}Note`)?.value || '';
             });
+            
+            // 將天氣資訊寫入備註供報表讀取
+            if(currentWeatherData) {
+                notesObj['_weather'] = JSON.stringify(currentWeatherData);
+            }
 
             const data = {
                 inspector: currentUser, inspectDate: document.getElementById('inspectDate').value,
@@ -423,7 +420,6 @@
         function openAdminPanel() {
             const pwd = prompt("請輸入管理員密碼：");
             if (pwd === "1234") { 
-                // 修正雙框架：確保開啟後台時，登入與表單區塊完全隱藏
                 document.getElementById('loginSection').classList.add('hidden'); 
                 document.getElementById('formSection').classList.add('hidden'); 
                 document.getElementById('adminSection').classList.remove('hidden'); 
@@ -431,13 +427,9 @@
             } else if (pwd !== null) alert("密碼錯誤！");
         }
         function closeAdminPanel() { 
-            // 修正雙框架：依據是否有登入者，決定顯示登入或表單
             document.getElementById('adminSection').classList.add('hidden'); 
-            if(currentUser) {
-                document.getElementById('formSection').classList.remove('hidden');
-            } else {
-                document.getElementById('loginSection').classList.remove('hidden'); 
-            }
+            if(currentUser) { document.getElementById('formSection').classList.remove('hidden'); } 
+            else { document.getElementById('loginSection').classList.remove('hidden'); }
         }
 
         function fetchReports() {
@@ -457,6 +449,23 @@
                     const task = getVal(row, '作業項目');
                     const filteredQ = questionData.filter(q => !q.applicable || q.applicable === "通用" || q.applicable.includes(task));
                     let ans = {}, notes = {}; try { ans = JSON.parse(getVal(row, '檢查結果JSON') || '{}'); } catch(e){} try { notes = JSON.parse(getVal(row, '異常說明JSON') || '{}'); } catch(e){}
+
+                    // 處理氣象資訊顯示
+                    let weatherHtml = '';
+                    if (notes['_weather']) {
+                        try {
+                            let w = JSON.parse(notes['_weather']);
+                            weatherHtml = `
+                                <div class="bg-blue-50 p-4 rounded-xl mt-3 border border-blue-200 text-sm avoid-break shadow-sm">
+                                    <div class="flex items-center gap-2 mb-2 border-b border-blue-200 pb-2">
+                                        <h4 class="font-bold text-blue-800 text-base">🌤️ 現場氣象與熱危害資訊</h4>
+                                    </div>
+                                    <p class="mb-1 text-gray-700">🌡️ 實際溫度：<span class="font-bold">${w.temp}°C</span> / 濕度：<span class="font-bold">${w.hum}%</span></p>
+                                    <p class="mb-1 text-gray-700">🔥 換算熱指數：<span class="${w.heatColor} font-extrabold text-base">${w.heatIndex} (${w.heatLevel})</span></p>
+                                    <p class="text-gray-700">💨 現場陣風風速：<span class="font-bold">${w.wind} m/s</span></p>
+                                </div>`;
+                        } catch(e) {}
+                    }
 
                     let gpsStr = getVal(row, 'GPS地圖') || getVal(row, 'GPS') || ''; let lat = "", lon = "", latLon = "";
                     if(gpsStr.includes('query=')) { let match = gpsStr.match(/query=([^&"]+)/); if(match && match[1]) { latLon = match[1]; let parts = latLon.split(','); if(parts.length===2) { lat=parts[0].trim(); lon=parts[1].trim(); } } }
@@ -490,7 +499,8 @@
                     let webMapHtml = '';
                     if (lat && lon) {
                         webMapHtml = `<p class="mt-2 text-sm font-bold text-blue-800 mb-1">📍 GPS 位置：${latLon} <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" class="text-blue-600 underline ml-2 text-xs bg-blue-50 px-2 py-1 rounded">🗺️ 開啟 Google 地圖</a></p>
-                                      <iframe class="w-full h-40 sm:h-48 rounded-lg border border-gray-300 mt-2 shadow-sm" src="https://maps.google.com/maps?q=${lat},${lon}&z=16&output=embed" frameborder="0"></iframe>`;
+                                      <iframe class="w-full h-40 sm:h-48 rounded-lg border border-gray-300 mt-2 shadow-sm" src="https://maps.google.com/maps?q=${lat},${lon}&z=16&output=embed" frameborder="0"></iframe>
+                                      ${weatherHtml}`;
                     }
 
                     let pdfMapHtml = '';
@@ -503,17 +513,18 @@
                                         <p class="text-xs text-gray-500 leading-relaxed">請掃描右方 QR Code<br>使用手機開啟 Google 地圖檢視精確位置。</p>
                                     </div>
                                     <img src="${base64Map}" class="w-20 h-20 object-contain rounded shadow-sm border border-gray-300" />
-                                </div>`;
+                                </div>${weatherHtml}`;
                         } else {
                             pdfMapHtml = `
                                 <div class="mb-4 avoid-break">
                                     <p class="font-bold text-gray-800 text-sm mb-1">📍 GPS 位置：${latLon}</p>
                                     <img src="${base64Map}" class="w-full h-40 object-cover rounded border border-gray-300 shadow-sm" />
-                                </div>`;
+                                </div>${weatherHtml}`;
                         }
+                    } else if (weatherHtml) {
+                         pdfMapHtml = weatherHtml;
                     }
 
-                    // 優化：報表日期與提交時間分上下兩行顯示
                     const basicInfo = `<div class="mb-4 border-b-2 border-gray-200 pb-4">
                                            <p class="text-lg sm:text-xl font-extrabold text-gray-800 mb-1">📅 巡檢日期：${date}</p>
                                            <p class="text-sm text-gray-500 font-medium">⏱️ 提交時間：${getVal(row, '提交時間')}</p>
@@ -563,6 +574,8 @@
                     });
 
                     let overallPics = getVal(row, '現場整體照片'); let sigPic = getVal(row, '簽名檔');
+                    
+                    // 優化：網頁版與 PDF 版簽名無外框
                     let footerBlock = `<div class="mt-8 avoid-break"><p class="font-extrabold text-gray-800 text-lg mb-3">📸 現場整體照片:</p>`;
                     if (overallPics) {
                         footerBlock += `<div class="flex flex-wrap gap-3">`;
@@ -571,7 +584,7 @@
                     } else footerBlock += `<p class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded inline-block">無</p>`;
                     
                     footerBlock += `</div><div class="border-t-2 border-gray-300 pt-5 mt-8 flex flex-col items-end gap-3 avoid-break"><p class="font-extrabold text-gray-800 text-lg">巡檢人員簽名確認:</p>`;
-                    if (sigPic && sigPic.startsWith('http')) footerBlock += `<img src="${sigPic}" class="h-24 object-contain bg-white border border-gray-200 p-2 rounded-xl" crossorigin="anonymous">`;
+                    if (sigPic && sigPic.startsWith('http')) footerBlock += `<img src="${sigPic}" class="h-20 sm:h-24 object-contain" crossorigin="anonymous">`;
                     footerBlock += `</div>`;
 
                     webHtml += footerBlock + `</div>`; 
