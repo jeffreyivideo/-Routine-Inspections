@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>信實集團 - 職安巡檢系統</title>
+    <title>信實集團 - 專業職安巡檢系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -29,13 +29,13 @@
         
         input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: #2563eb; }
         
-        /* 針對下拉選單群組的樣式大幅強化 */
         select optgroup { font-weight: 900; font-size: 1.25rem; }
         select option { font-weight: 700; font-size: 1.1rem; }
     </style>
 </head>
 <body id="mainBody" class="app-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
 
+    <!-- 實體的 PDF 渲染容器 -->
     <div id="pdfExportContainer"></div>
 
     <button id="adminBtn" onclick="openAdminPanel()" class="absolute top-4 left-4 bg-slate-700 text-white px-4 py-2 rounded-xl text-sm shadow opacity-80 hover:opacity-100 transition z-50">
@@ -53,10 +53,12 @@
         <div class="space-y-6">
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">👤 員工姓名</label>
-                <input type="text" id="empName" placeholder="輸入中文姓名" oninput="this.value = this.value.replace(/[^\u4E00-\u9FA5]/g, '');" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
+                <!-- 移除 oninput，解決手機注音鍵盤無法打第一個字的問題 -->
+                <input type="text" id="empName" placeholder="輸入中文姓名" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">📅 出生年月日 (如 801230)</label>
+                <!-- 數字鍵盤不會有輸入法選字問題，保留原設定 -->
                 <input type="text" id="empDob" placeholder="輸入 6 碼數字" maxlength="6" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '');" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <button onclick="handleLogin()" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg text-xl transition active:scale-95">
@@ -136,7 +138,7 @@
             <div class="bg-blue-50/60 p-5 rounded-2xl border border-blue-100 space-y-5">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-base font-bold text-gray-800 mb-2">航廈 </label>
+                        <label class="block text-base font-bold text-gray-800 mb-2">航廈 (大項)</label>
                         <select id="locationMajor" required class="w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 outline-none bg-white text-lg font-medium">
                             <option value="">請選擇航廈...</option>
                             <option value="T1航廈">T1 航廈</option>
@@ -145,7 +147,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-base font-bold text-gray-800 mb-2">區域 </label>
+                        <label class="block text-base font-bold text-gray-800 mb-2">區域 (小項)</label>
                         <select id="locationMinor" required class="w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 outline-none bg-white text-lg font-medium">
                             <option value="">請選擇區域...</option>
                             <option value="管制區">管制區</option>
@@ -161,7 +163,6 @@
 
             <div>
                 <label class="block text-base font-bold text-gray-800 mb-2">作業項目</label>
-                <!-- 優化選單文字與顏色分類 -->
                 <select id="taskType" required onchange="renderChecklist()" class="w-full px-4 py-4 rounded-xl border-2 border-blue-300 text-blue-900 font-extrabold outline-none bg-white text-xl shadow-sm">
                     <option value="" class="text-gray-500">請選擇本次作業項目...</option>
                     <optgroup label="🟢 ━━ 一般作業 ━━" style="color: #15803d; font-size: 1.25rem;">
@@ -192,7 +193,7 @@
 
             <div id="signatureSection" class="mt-10 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-md hidden-smooth flex-col">
                 <label class="block font-extrabold text-xl text-gray-800 mb-2">巡檢人員簽名確認 <span class="text-red-500">*</span></label>
-                <p class="text-sm font-bold text-red-600 bg-red-50 py-1.5 px-3 rounded-lg inline-block mb-4">⚠️ 必須簽署完整中文全名</p>
+                <p class="text-sm font-bold text-red-600 bg-red-50 py-1.5 px-3 rounded-lg inline-block mb-4">⚠️ 系統防呆：必須簽署完整中文全名</p>
                 <canvas id="signaturePad"></canvas>
                 <div class="flex justify-end mt-4">
                     <button type="button" onclick="clearSignature()" class="text-base bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2.5 rounded-xl font-bold shadow-sm transition active:scale-95">清除重簽</button>
@@ -259,7 +260,6 @@
                 else if(heatIndex >= 38 && heatIndex < 54) { heatLevel = "第三級：危險"; heatColor = "text-red-500"; }
                 else if(heatIndex >= 54) { heatLevel = "第四級：極度危險"; heatColor = "text-purple-600"; }
 
-                // 儲存氣象資料供送出時打包寫入報表
                 currentWeatherData = { temp, hum, heatIndex, heatLevel, heatColor, wind };
 
                 document.getElementById('weatherInfo').innerHTML = `
@@ -298,24 +298,37 @@
         }
 
         function handleLogin() {
-            const name = document.getElementById('empName').value.trim(); const dob = document.getElementById('empDob').value.trim();
-            if(name && /^\d{6}$/.test(dob)) {
-                document.getElementById('loginBtn').innerHTML = '🔄 核對中...'; document.getElementById('loginBtn').disabled = true;
-                fetch(`${GOOGLE_SCRIPT_URL}?action=checkStaff&name=${encodeURIComponent(name)}&dob=${dob}`)
-                .then(res => res.json()).then(authRes => {
-                    if (authRes.status !== "success") {
-                        alert('❌ 登入失敗：查無此員工姓名或生日錯誤！');
-                        document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; document.getElementById('loginBtn').disabled = false; return;
-                    }
-                    fetch(GOOGLE_SCRIPT_URL).then(res => res.json()).then(data => {
-                        questionData = data; currentUser = name;
-                        document.getElementById('loginSection').classList.add('hidden'); document.getElementById('formSection').classList.remove('hidden');
-                        document.getElementById('displayInspector').textContent = name;
-                        setTodayDate(); getLocation(); resizeCanvas();
-                        document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; document.getElementById('loginBtn').disabled = false;
-                    });
-                }).catch(err => { alert('連線失敗。'); document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; document.getElementById('loginBtn').disabled = false; });
-            } else alert('請確認姓名已填寫，且生日為 6 碼數字。');
+            const name = document.getElementById('empName').value.trim(); 
+            const dob = document.getElementById('empDob').value.trim();
+            
+            // 加入強制防呆檢核
+            const chineseRegex = /^[\u4E00-\u9FA5]+$/;
+            if (!name || !chineseRegex.test(name)) {
+                alert('⚠️ 請輸入有效的中文姓名（不可包含英文、數字或空白）。');
+                return;
+            }
+            if (!/^\d{6}$/.test(dob)) {
+                alert('⚠️ 請確認生日為 6 碼數字。');
+                return;
+            }
+
+            document.getElementById('loginBtn').innerHTML = '🔄 核對中...'; 
+            document.getElementById('loginBtn').disabled = true;
+            
+            fetch(`${GOOGLE_SCRIPT_URL}?action=checkStaff&name=${encodeURIComponent(name)}&dob=${dob}`)
+            .then(res => res.json()).then(authRes => {
+                if (authRes.status !== "success") {
+                    alert('❌ 登入失敗：查無此員工姓名或生日錯誤！');
+                    document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; document.getElementById('loginBtn').disabled = false; return;
+                }
+                fetch(GOOGLE_SCRIPT_URL).then(res => res.json()).then(data => {
+                    questionData = data; currentUser = name;
+                    document.getElementById('loginSection').classList.add('hidden'); document.getElementById('formSection').classList.remove('hidden');
+                    document.getElementById('displayInspector').textContent = name;
+                    setTodayDate(); getLocation(); resizeCanvas();
+                    document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; document.getElementById('loginBtn').disabled = false;
+                });
+            }).catch(err => { alert('連線失敗。'); document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; document.getElementById('loginBtn').disabled = false; });
         }
 
         function renderChecklist() {
@@ -383,7 +396,7 @@
 
         function submitForm(e) {
             e.preventDefault();
-            if (strokeCount < 6 || (maxX - minX) < 150 || signatureDistance < 900) { alert('⚠️ 請簽署完整中文全名。'); return; }
+            if (strokeCount < 6 || (maxX - minX) < 150 || signatureDistance < 900) { alert('⚠️ 筆劃不足！請簽署完整中文全名。'); return; }
             const submitBtn = document.getElementById('submitBtn'); submitBtn.innerHTML = '🔄 上傳中...'; submitBtn.disabled = true;
 
             let answersObj = {}, notesObj = {};
@@ -392,10 +405,7 @@
                 answersObj[qId] = document.querySelector(`input[name="${qId}"]:checked`)?.value || ''; notesObj[qId] = document.getElementById(`${qId}Note`)?.value || '';
             });
             
-            // 將天氣資訊寫入備註供報表讀取
-            if(currentWeatherData) {
-                notesObj['_weather'] = JSON.stringify(currentWeatherData);
-            }
+            if(currentWeatherData) { notesObj['_weather'] = JSON.stringify(currentWeatherData); }
 
             const data = {
                 inspector: currentUser, inspectDate: document.getElementById('inspectDate').value,
@@ -450,7 +460,6 @@
                     const filteredQ = questionData.filter(q => !q.applicable || q.applicable === "通用" || q.applicable.includes(task));
                     let ans = {}, notes = {}; try { ans = JSON.parse(getVal(row, '檢查結果JSON') || '{}'); } catch(e){} try { notes = JSON.parse(getVal(row, '異常說明JSON') || '{}'); } catch(e){}
 
-                    // 處理氣象資訊顯示
                     let weatherHtml = '';
                     if (notes['_weather']) {
                         try {
@@ -574,8 +583,6 @@
                     });
 
                     let overallPics = getVal(row, '現場整體照片'); let sigPic = getVal(row, '簽名檔');
-                    
-                    // 優化：網頁版與 PDF 版簽名無外框
                     let footerBlock = `<div class="mt-8 avoid-break"><p class="font-extrabold text-gray-800 text-lg mb-3">📸 現場整體照片:</p>`;
                     if (overallPics) {
                         footerBlock += `<div class="flex flex-wrap gap-3">`;
@@ -584,7 +591,7 @@
                     } else footerBlock += `<p class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded inline-block">無</p>`;
                     
                     footerBlock += `</div><div class="border-t-2 border-gray-300 pt-5 mt-8 flex flex-col items-end gap-3 avoid-break"><p class="font-extrabold text-gray-800 text-lg">巡檢人員簽名確認:</p>`;
-                    if (sigPic && sigPic.startsWith('http')) footerBlock += `<img src="${sigPic}" class="h-20 sm:h-24 object-contain" crossorigin="anonymous">`;
+                    if (sigPic && sigPic.startsWith('http')) footerBlock += `<img src="${sigPic}" class="h-24 object-contain bg-white border border-gray-200 p-2 rounded-xl" crossorigin="anonymous">`;
                     footerBlock += `</div>`;
 
                     webHtml += footerBlock + `</div>`; 
