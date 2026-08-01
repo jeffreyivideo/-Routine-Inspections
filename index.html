@@ -23,7 +23,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
         #pdfExportContainer { position: absolute; left: -10000px; top: 0; width: 210mm; visibility: hidden; background: white; text-align: left; z-index: -1; }
-        .pdf-page { width: 210mm; padding: 15mm; background: white; box-sizing: border-box; page-break-after: always; }
+        .pdf-page { width: 210mm; padding: 12mm 15mm; background: white; box-sizing: border-box; page-break-after: always; min-height: 297mm; }
         .pdf-page:last-child { page-break-after: auto; }
         .avoid-break { page-break-inside: avoid; break-inside: avoid; }
         
@@ -65,7 +65,7 @@
         </div>
     </div>
 
-    <!-- 後台報表下載區塊 (新增視覺化標記月曆) -->
+    <!-- 後台報表下載區塊 -->
     <div id="adminSection" class="glass-panel w-full max-w-4xl rounded-2xl p-5 sm:p-8 hidden max-h-[90vh] overflow-y-auto mt-10 sm:mt-0">
         <div class="flex justify-between items-center mb-4 border-b-2 border-gray-200 pb-3">
             <h2 class="text-xl sm:text-2xl font-extrabold text-gray-800 flex items-center gap-2">
@@ -87,7 +87,6 @@
                 <span class="text-red-500">日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="text-blue-500">六</span>
             </div>
             
-            <!-- 日期網格 (帶有綠點標記) -->
             <div id="calendarGrid" class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-sm font-bold"></div>
             
             <div class="flex flex-wrap items-center justify-between pt-2 border-t text-xs text-gray-600 gap-2">
@@ -229,10 +228,9 @@
         let currentUser = ''; let uploadedPhotos = {}; let questionData = []; let generalPhotosList = []; 
         let globalPdfHtml = ''; let currentWeatherData = null;
         
-        // 月曆模組全域變數
         let recordedDatesList = [];
         let calYear = new Date().getFullYear();
-        let calMonth = new Date().getMonth(); // 0 - 11
+        let calMonth = new Date().getMonth(); 
 
         function compressImage(file, callback) {
             const reader = new FileReader();
@@ -459,7 +457,7 @@
                 document.getElementById('formSection').classList.add('hidden'); 
                 document.getElementById('adminSection').classList.remove('hidden'); 
                 setTodayDate(); 
-                fetchRecordedDatesAndRender(); // 開啟後台時自動加載有巡檢紀錄的月曆
+                fetchRecordedDatesAndRender(); 
             } else if (pwd !== null) alert("密碼錯誤！");
         }
         
@@ -469,16 +467,16 @@
             else { document.getElementById('loginSection').classList.remove('hidden'); }
         }
 
-        // === 📅 視覺化標記月曆 logic ===
         function fetchRecordedDatesAndRender() {
             fetch(`${GOOGLE_SCRIPT_URL}?action=getRecordedDates`)
             .then(res => res.json())
             .then(dates => {
-                recordedDatesList = dates;
+                recordedDatesList = Array.isArray(dates) ? dates : [];
                 renderCalendar();
-                fetchReports(); // 預設查詢當日
+                fetchReports(); 
             })
             .catch(err => {
+                recordedDatesList = [];
                 renderCalendar();
                 fetchReports();
             });
@@ -516,16 +514,13 @@
             grid.innerHTML = '';
 
             const selectedDate = document.getElementById('reportDate').value;
-
             const firstDayIndex = new Date(calYear, calMonth, 1).getDay();
             const totalDays = new Date(calYear, calMonth + 1, 0).getDate();
 
-            // 填充前空白
             for (let i = 0; i < firstDayIndex; i++) {
                 grid.insertAdjacentHTML('beforeend', `<div></div>`);
             }
 
-            // 填充日期區塊
             for (let day = 1; day <= totalDays; day++) {
                 const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const hasRecord = recordedDatesList.includes(dateStr);
@@ -554,12 +549,23 @@
 
         function fetchReports() {
             const date = document.getElementById('reportDate').value; if (!date) return;
-            document.getElementById('reportContent').innerHTML = '🔄 資料同步與地圖生成中，請稍候...';
+            const reportContent = document.getElementById('reportContent');
+            reportContent.innerHTML = '🔄 資料同步與地圖生成中，請稍候...';
 
             let loadQ = questionData.length === 0 ? fetch(GOOGLE_SCRIPT_URL).then(res => res.json()).then(data => { questionData = data; }) : Promise.resolve();
 
-            loadQ.then(() => fetch(`${GOOGLE_SCRIPT_URL}?action=getReports&date=${date}`).then(res => res.json())).then(async (data) => {
-                if (data.length === 0) { document.getElementById('reportContent').innerHTML = `<p class="text-red-500 font-bold">日期 ${date} 尚無任何巡檢紀錄。</p>`; document.getElementById('downloadPdfBtn').classList.add('hidden'); return; }
+            loadQ.then(() => fetch(`${GOOGLE_SCRIPT_URL}?action=getReports&date=${date}`).then(res => res.json()))
+            .then(async (data) => {
+                // 友善無資料提示（非報錯）
+                if (!Array.isArray(data) || data.length === 0) { 
+                    reportContent.innerHTML = `
+                        <div class="text-center py-8">
+                            <p class="text-gray-500 font-bold text-lg mb-2">📅 ${date} 尚無任何巡檢紀錄</p>
+                            <p class="text-sm text-gray-400">請確認選取日期，或由前線巡檢員填寫表單送出。</p>
+                        </div>`; 
+                    document.getElementById('downloadPdfBtn').classList.add('hidden'); 
+                    return; 
+                }
                 
                 let webHtml = ''; globalPdfHtml = ''; 
                 const getVal = (row, colName) => { for (let k in row) { if (k.replace(/\s/g, '') === colName) return row[k]; } return ''; };
@@ -658,22 +664,11 @@
                                     ${HEADER_TEMPLATE}${basicInfo}${webMapHtml}
                                     <h4 class="font-extrabold text-gray-800 text-lg border-b pb-1 mt-6 mb-4 flex items-center gap-2">📋 安全檢核項目</h4>`;
                     
-                    let currentPdfPage = `<div class="pdf-page">${HEADER_TEMPLATE}${basicInfo}${pdfMapHtml}<h4 class="font-bold text-gray-800 text-sm border-b pb-1 mt-4 mb-3">📋 安全檢核項目明細：</h4>`;
-                    let spaceUsed = 0; let pageCapacity = 5; 
-
                     filteredQ.forEach(q => {
                         const qNum = q.id.replace('q', ''); 
                         let result = ans[q.id] || getVal(row, `Q${qNum}結果`) || '未檢測';
                         let note = notes[q.id] || getVal(row, `Q${qNum}說明`);
                         let pic = getVal(row, `Q${qNum}照片`);
-
-                        let itemCost = (pic && pic.startsWith('http')) ? 2.5 : 1; 
-
-                        if (spaceUsed + itemCost > pageCapacity) {
-                            currentPdfPage += `</div>`; globalPdfHtml += currentPdfPage; 
-                            currentPdfPage = `<div class="pdf-page">${HEADER_TEMPLATE}<h4 class="font-bold text-gray-800 text-sm border-b pb-1 mb-3">📋 安全檢核項目明細 (續)：</h4>`;
-                            pageCapacity = 7; spaceUsed = 0; 
-                        }
 
                         let webQBlock = `<div class="bg-blue-50/30 p-4 rounded-xl border border-gray-200 text-base mb-4 avoid-break">
                                         <p class="font-extrabold text-gray-900 text-lg mb-1"><span class="text-blue-600">[${q.category}]</span> ${q.item}</p>
@@ -682,19 +677,10 @@
                         if (pic && pic.startsWith('http')) webQBlock += `<div class="mt-3"><p class="text-red-600 font-bold mb-2 text-sm">🚨 異常照片：</p><img src="${pic}" class="h-40 object-contain rounded-lg border border-gray-300 shadow-sm" crossorigin="anonymous"></div>`;
                         webQBlock += `</div>`;
 
-                        let pdfQBlock = `<div class="bg-gray-50 p-3 rounded border border-gray-200 text-xs mb-3 avoid-break">
-                                        <p class="font-bold text-gray-800 text-sm">[${q.category}] ${q.item}</p>
-                                        <p class="text-gray-500 mb-1">${q.standard}</p>
-                                        <p class="text-sm">檢查結果：<span class="${result==='異常'?'text-red-600 font-bold':(result==='正常'?'text-green-600 font-bold':'text-gray-500 font-bold')}">${result}</span> ${note?`(說明：${note})`:''}</p>`;
-                        if (pic && pic.startsWith('http')) pdfQBlock += `<div class="mt-2 pt-2 border-t border-gray-200"><p class="text-red-600 font-bold mb-1 text-xs">🚨 異常照片：</p><img src="${pic}" class="h-32 object-contain rounded border border-gray-300 shadow-sm" crossorigin="anonymous"></div>`;
-                        pdfQBlock += `</div>`;
-
-                        webHtml += webQBlock; currentPdfPage += pdfQBlock; spaceUsed += itemCost;
+                        webHtml += webQBlock; 
                     });
 
                     let overallPics = getVal(row, '現場整體照片'); let sigPic = getVal(row, '簽名檔');
-                    
-                    // 簽名無外框顯示
                     let footerBlock = `<div class="mt-8 avoid-break"><p class="font-extrabold text-gray-800 text-lg mb-3">📸 現場整體照片:</p>`;
                     if (overallPics) {
                         footerBlock += `<div class="flex flex-wrap gap-3">`;
@@ -707,8 +693,37 @@
                     footerBlock += `</div>`;
 
                     webHtml += footerBlock + `</div>`; 
-                    if (spaceUsed > 4) { currentPdfPage += `</div>`; globalPdfHtml += currentPdfPage; currentPdfPage = `<div class="pdf-page">${HEADER_TEMPLATE}`; }
-                    
+
+                    // ===== 🚀 PDF 動態像素高度智慧分頁演算法 =====
+                    const PDF_PAGE_HEIGHT_PX = 980; // A4 一頁可容納的極限像素高度 (扣除 padding)
+                    let currentPageHtml = HEADER_TEMPLATE + basicInfo + pdfMapHtml + `<h4 class="font-bold text-gray-800 text-sm border-b pb-1 mt-4 mb-3">📋 安全檢核項目明細：</h4>`;
+                    let currentHeight = 320; // 表頭+基本資料預估高度
+
+                    filteredQ.forEach(q => {
+                        const qNum = q.id.replace('q', ''); 
+                        let result = ans[q.id] || getVal(row, `Q${qNum}結果`) || '未檢測';
+                        let note = notes[q.id] || getVal(row, `Q${qNum}說明`);
+                        let pic = getVal(row, `Q${qNum}照片`);
+
+                        let itemHeight = (pic && pic.startsWith('http')) ? 220 : 75; // 動態高度判定
+
+                        if (currentHeight + itemHeight > PDF_PAGE_HEIGHT_PX) {
+                            globalPdfHtml += `<div class="pdf-page">${currentPageHtml}</div>`;
+                            currentPageHtml = HEADER_TEMPLATE + `<h4 class="font-bold text-gray-800 text-sm border-b pb-1 mb-3">📋 安全檢核項目明細 (續)：</h4>`;
+                            currentHeight = 80; // 續頁表頭高度
+                        }
+
+                        let pdfQBlock = `<div class="bg-gray-50 p-3 rounded border border-gray-200 text-xs mb-3 avoid-break">
+                                        <p class="font-bold text-gray-800 text-sm">[${q.category}] ${q.item}</p>
+                                        <p class="text-gray-500 mb-1">${q.standard}</p>
+                                        <p class="text-sm">檢查結果：<span class="${result==='異常'?'text-red-600 font-bold':(result==='正常'?'text-green-600 font-bold':'text-gray-500 font-bold')}">${result}</span> ${note?`(說明：${note})`:''}</p>`;
+                        if (pic && pic.startsWith('http')) pdfQBlock += `<div class="mt-2 pt-2 border-t border-gray-200"><p class="text-red-600 font-bold mb-1 text-xs">🚨 異常照片：</p><img src="${pic}" class="h-32 object-contain rounded border border-gray-300 shadow-sm" crossorigin="anonymous"></div>`;
+                        pdfQBlock += `</div>`;
+
+                        currentPageHtml += pdfQBlock;
+                        currentHeight += itemHeight;
+                    });
+
                     let pdfFooterBlock = `<div class="mt-6 avoid-break"><p class="font-bold text-gray-800 text-sm mb-2">📸 現場整體照片:</p>`;
                     if (overallPics) {
                         pdfFooterBlock += `<div class="flex flex-wrap gap-2">`;
@@ -719,13 +734,23 @@
                     if (sigPic && sigPic.startsWith('http')) pdfFooterBlock += `<img src="${sigPic}" class="h-16 object-contain" crossorigin="anonymous">`;
                     pdfFooterBlock += `</div>`;
 
-                    currentPdfPage += pdfFooterBlock + `</div>`; globalPdfHtml += currentPdfPage; 
+                    if (currentHeight + 180 > PDF_PAGE_HEIGHT_PX) {
+                        globalPdfHtml += `<div class="pdf-page">${currentPageHtml}</div>`;
+                        currentPageHtml = HEADER_TEMPLATE + pdfFooterBlock;
+                    } else {
+                        currentPageHtml += pdfFooterBlock;
+                    }
+
+                    globalPdfHtml += `<div class="pdf-page">${currentPageHtml}</div>`;
                 }
                 
                 document.getElementById('reportContent').innerHTML = webHtml;
                 document.getElementById('pdfExportContainer').innerHTML = globalPdfHtml;
                 document.getElementById('downloadPdfBtn').classList.remove('hidden');
-            }).catch(err => { document.getElementById('reportContent').innerHTML = '抓取失敗。'; });
+            }).catch(err => { 
+                console.error("fetchReports Error:", err);
+                reportContent.innerHTML = `<p class="text-red-500 font-bold">⚠️ 連線或讀取失敗，請重新選擇日期或檢查網路。</p>`; 
+            });
         }
 
         function downloadAdminReport() {
