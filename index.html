@@ -53,12 +53,10 @@
         <div class="space-y-6">
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">👤 員工姓名</label>
-                <!-- 移除 oninput，解決手機注音鍵盤無法打第一個字的問題 -->
                 <input type="text" id="empName" placeholder="輸入中文姓名" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">📅 出生年月日 (如 801230)</label>
-                <!-- 數字鍵盤不會有輸入法選字問題，保留原設定 -->
                 <input type="text" id="empDob" placeholder="輸入 6 碼數字" maxlength="6" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '');" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <button onclick="handleLogin()" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg text-xl transition active:scale-95">
@@ -67,9 +65,9 @@
         </div>
     </div>
 
-    <!-- 後台報表下載區塊 -->
+    <!-- 後台報表下載區塊 (新增視覺化標記月曆) -->
     <div id="adminSection" class="glass-panel w-full max-w-4xl rounded-2xl p-5 sm:p-8 hidden max-h-[90vh] overflow-y-auto mt-10 sm:mt-0">
-        <div class="flex justify-between items-center mb-5 border-b-2 border-gray-200 pb-4">
+        <div class="flex justify-between items-center mb-4 border-b-2 border-gray-200 pb-3">
             <h2 class="text-xl sm:text-2xl font-extrabold text-gray-800 flex items-center gap-2">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-6 sm:h-8" crossorigin="anonymous">
                 職安巡檢報表
@@ -77,9 +75,28 @@
             <button onclick="closeAdminPanel()" class="bg-red-50 text-red-600 font-bold hover:bg-red-100 px-4 py-1.5 rounded-lg border border-red-200 text-sm whitespace-nowrap active:scale-95">關閉</button>
         </div>
 
-        <div class="flex flex-row gap-3 mb-6 bg-gray-50 p-3 rounded-xl border border-gray-200">
-            <input type="date" id="reportDate" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg outline-none text-base sm:text-lg bg-white">
-            <button onclick="fetchReports()" class="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold text-base whitespace-nowrap active:scale-95 shadow-sm hover:bg-slate-800 transition">查詢紀錄</button>
+        <!-- 📅 視覺化標記月曆卡片區塊 -->
+        <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 mb-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between font-extrabold text-gray-800 text-base sm:text-lg">
+                <button onclick="changeCalendarMonth(-1)" class="px-3 py-1.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 shadow-sm active:scale-95">◀</button>
+                <span id="calendarMonthLabel" class="text-blue-900 tracking-wide">2026年 08月</span>
+                <button onclick="changeCalendarMonth(1)" class="px-3 py-1.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 shadow-sm active:scale-95">▶</button>
+            </div>
+            
+            <div class="grid grid-cols-7 text-center font-bold text-xs sm:text-sm text-gray-500 border-b pb-2">
+                <span class="text-red-500">日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="text-blue-500">六</span>
+            </div>
+            
+            <!-- 日期網格 (帶有綠點標記) -->
+            <div id="calendarGrid" class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-sm font-bold"></div>
+            
+            <div class="flex flex-wrap items-center justify-between pt-2 border-t text-xs text-gray-600 gap-2">
+                <span class="flex items-center gap-1.5 font-bold"><span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block shadow-sm"></span> 🟢 綠點表示當天有巡檢紀錄</span>
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-gray-700">特定日期：</span>
+                    <input type="date" id="reportDate" onchange="onDateInputChange()" class="border px-2 py-1 rounded-lg bg-white font-bold text-gray-800 outline-none">
+                </div>
+            </div>
         </div>
         
         <div id="reportContent" class="bg-white p-4 sm:p-6 rounded-xl border min-h-[200px] text-gray-700">
@@ -93,7 +110,6 @@
 
     <!-- 巡檢表單區塊 -->
     <div id="formSection" class="glass-panel w-full max-w-3xl rounded-3xl p-5 sm:p-8 hidden max-h-[95vh] overflow-y-auto mt-10 sm:mt-0">
-        
         <div class="flex flex-col gap-4 mb-6 border-b-2 border-gray-200 pb-5">
             <h2 class="text-3xl font-extrabold text-gray-800 flex items-center justify-center sm:justify-start gap-3">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-10" crossorigin="anonymous">
@@ -212,6 +228,11 @@
         
         let currentUser = ''; let uploadedPhotos = {}; let questionData = []; let generalPhotosList = []; 
         let globalPdfHtml = ''; let currentWeatherData = null;
+        
+        // 月曆模組全域變數
+        let recordedDatesList = [];
+        let calYear = new Date().getFullYear();
+        let calMonth = new Date().getMonth(); // 0 - 11
 
         function compressImage(file, callback) {
             const reader = new FileReader();
@@ -241,8 +262,13 @@
 
         function setTodayDate() {
             const today = new Date();
-            document.getElementById('inspectDate').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            document.getElementById('reportDate').value = document.getElementById('inspectDate').value;
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('inspectDate').value = `${yyyy}-${mm}-${dd}`;
+            document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
+            calYear = today.getFullYear();
+            calMonth = today.getMonth();
         }
 
         async function fetchWeather(lat, lon) {
@@ -301,7 +327,6 @@
             const name = document.getElementById('empName').value.trim(); 
             const dob = document.getElementById('empDob').value.trim();
             
-            // 加入強制防呆檢核
             const chineseRegex = /^[\u4E00-\u9FA5]+$/;
             if (!name || !chineseRegex.test(name)) {
                 alert('⚠️ 請輸入有效的中文姓名（不可包含英文、數字或空白）。');
@@ -434,12 +459,97 @@
                 document.getElementById('formSection').classList.add('hidden'); 
                 document.getElementById('adminSection').classList.remove('hidden'); 
                 setTodayDate(); 
+                fetchRecordedDatesAndRender(); // 開啟後台時自動加載有巡檢紀錄的月曆
             } else if (pwd !== null) alert("密碼錯誤！");
         }
+        
         function closeAdminPanel() { 
             document.getElementById('adminSection').classList.add('hidden'); 
             if(currentUser) { document.getElementById('formSection').classList.remove('hidden'); } 
             else { document.getElementById('loginSection').classList.remove('hidden'); }
+        }
+
+        // === 📅 視覺化標記月曆 logic ===
+        function fetchRecordedDatesAndRender() {
+            fetch(`${GOOGLE_SCRIPT_URL}?action=getRecordedDates`)
+            .then(res => res.json())
+            .then(dates => {
+                recordedDatesList = dates;
+                renderCalendar();
+                fetchReports(); // 預設查詢當日
+            })
+            .catch(err => {
+                renderCalendar();
+                fetchReports();
+            });
+        }
+
+        function changeCalendarMonth(delta) {
+            calMonth += delta;
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            else if (calMonth > 11) { calMonth = 0; calYear++; }
+            renderCalendar();
+        }
+
+        function onDateInputChange() {
+            const val = document.getElementById('reportDate').value;
+            if(val) {
+                const parts = val.split('-');
+                calYear = parseInt(parts[0]);
+                calMonth = parseInt(parts[1]) - 1;
+                renderCalendar();
+                fetchReports();
+            }
+        }
+
+        function selectDateFromCalendar(dateStr) {
+            document.getElementById('reportDate').value = dateStr;
+            renderCalendar();
+            fetchReports();
+        }
+
+        function renderCalendar() {
+            const label = document.getElementById('calendarMonthLabel');
+            label.textContent = `${calYear}年 ${String(calMonth + 1).padStart(2, '0')}月`;
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            const selectedDate = document.getElementById('reportDate').value;
+
+            const firstDayIndex = new Date(calYear, calMonth, 1).getDay();
+            const totalDays = new Date(calYear, calMonth + 1, 0).getDate();
+
+            // 填充前空白
+            for (let i = 0; i < firstDayIndex; i++) {
+                grid.insertAdjacentHTML('beforeend', `<div></div>`);
+            }
+
+            // 填充日期區塊
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const hasRecord = recordedDatesList.includes(dateStr);
+                const isSelected = (dateStr === selectedDate);
+
+                let btnClass = "py-2 rounded-xl flex flex-col items-center justify-center relative cursor-pointer transition active:scale-95 border ";
+                
+                if (isSelected) {
+                    btnClass += "bg-blue-600 text-white font-extrabold border-blue-600 shadow-md ";
+                } else if (hasRecord) {
+                    btnClass += "bg-green-100 text-green-900 font-extrabold border-green-300 hover:bg-green-200 ";
+                } else {
+                    btnClass += "bg-white text-gray-700 border-gray-100 hover:bg-gray-100 ";
+                }
+
+                let dotHtml = hasRecord ? `<span class="w-2 h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-green-600'} mt-0.5"></span>` : `<span class="w-2 h-2 opacity-0 mt-0.5"></span>`;
+
+                grid.insertAdjacentHTML('beforeend', `
+                    <div onclick="selectDateFromCalendar('${dateStr}')" class="${btnClass}">
+                        <span>${day}</span>
+                        ${dotHtml}
+                    </div>
+                `);
+            }
         }
 
         function fetchReports() {
@@ -449,7 +559,7 @@
             let loadQ = questionData.length === 0 ? fetch(GOOGLE_SCRIPT_URL).then(res => res.json()).then(data => { questionData = data; }) : Promise.resolve();
 
             loadQ.then(() => fetch(`${GOOGLE_SCRIPT_URL}?action=getReports&date=${date}`).then(res => res.json())).then(async (data) => {
-                if (data.length === 0) { document.getElementById('reportContent').innerHTML = `<p class="text-red-500 font-bold">尚無紀錄。</p>`; document.getElementById('downloadPdfBtn').classList.add('hidden'); return; }
+                if (data.length === 0) { document.getElementById('reportContent').innerHTML = `<p class="text-red-500 font-bold">日期 ${date} 尚無任何巡檢紀錄。</p>`; document.getElementById('downloadPdfBtn').classList.add('hidden'); return; }
                 
                 let webHtml = ''; globalPdfHtml = ''; 
                 const getVal = (row, colName) => { for (let k in row) { if (k.replace(/\s/g, '') === colName) return row[k]; } return ''; };
@@ -583,6 +693,8 @@
                     });
 
                     let overallPics = getVal(row, '現場整體照片'); let sigPic = getVal(row, '簽名檔');
+                    
+                    // 簽名無外框顯示
                     let footerBlock = `<div class="mt-8 avoid-break"><p class="font-extrabold text-gray-800 text-lg mb-3">📸 現場整體照片:</p>`;
                     if (overallPics) {
                         footerBlock += `<div class="flex flex-wrap gap-3">`;
@@ -591,7 +703,7 @@
                     } else footerBlock += `<p class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded inline-block">無</p>`;
                     
                     footerBlock += `</div><div class="border-t-2 border-gray-300 pt-5 mt-8 flex flex-col items-end gap-3 avoid-break"><p class="font-extrabold text-gray-800 text-lg">巡檢人員簽名確認:</p>`;
-                    if (sigPic && sigPic.startsWith('http')) footerBlock += `<img src="${sigPic}" class="h-24 object-contain bg-white border border-gray-200 p-2 rounded-xl" crossorigin="anonymous">`;
+                    if (sigPic && sigPic.startsWith('http')) footerBlock += `<img src="${sigPic}" class="h-20 sm:h-24 object-contain" crossorigin="anonymous">`;
                     footerBlock += `</div>`;
 
                     webHtml += footerBlock + `</div>`; 
