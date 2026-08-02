@@ -97,7 +97,6 @@
             請選擇日期並點擊查詢。
         </div>
         
-        <!-- 🚀 變更按鈕文字以符合分享功能 -->
         <button id="downloadPdfBtn" onclick="downloadAdminReport()" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl hidden shadow-lg transition text-lg active:scale-95">
             📤 匯出並分享 PDF 報表
         </button>
@@ -275,10 +274,12 @@
                 const heatIndex = current.apparent_temperature;
                 const wind = current.wind_speed_10m;
 
-                let heatLevel = "一般注意"; let heatColor = "text-yellow-600";
-                if(heatIndex >= 32 && heatIndex < 38) { heatLevel = "第二級：格外注意"; heatColor = "text-orange-500"; }
-                else if(heatIndex >= 38 && heatIndex < 54) { heatLevel = "第三級：危險"; heatColor = "text-red-500"; }
-                else if(heatIndex >= 54) { heatLevel = "第四級：極度危險"; heatColor = "text-purple-600"; }
+                // 🔥 已更新為勞動部最新官方四級標準
+                let heatLevel = "未達預警標準"; let heatColor = "text-gray-500";
+                if (heatIndex >= 26.7 && heatIndex < 32.2) { heatLevel = "第一級：注意"; heatColor = "text-green-600"; }
+                else if (heatIndex >= 32.2 && heatIndex < 40.6) { heatLevel = "第二級：格外注意"; heatColor = "text-yellow-600"; }
+                else if (heatIndex >= 40.6 && heatIndex < 54.4) { heatLevel = "第三級：危險"; heatColor = "text-orange-500"; }
+                else if (heatIndex >= 54.4) { heatLevel = "第四級：極度危險"; heatColor = "text-red-600"; }
 
                 currentWeatherData = { temp, hum, heatIndex, heatLevel, heatColor, wind };
 
@@ -438,9 +439,6 @@
             }).catch(error => { alert('提交失敗'); submitBtn.innerHTML = '📤 傳送巡檢紀錄'; submitBtn.disabled = false; });
         }
 
-        // ==========================================
-        // 🚀 PDF 表頭與接續頁模版
-        // ==========================================
         const PDF_HEADER_TEMPLATE = `
             <div class="flex items-center justify-center gap-3 pb-3 border-b border-gray-200 mb-4 avoid-break">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-8 object-contain" crossorigin="anonymous">
@@ -595,7 +593,7 @@
                                     <p class="mb-1 text-gray-700">🔥 換算熱指數：<span class="${w.heatColor} font-extrabold text-base">${w.heatIndex} (${w.heatLevel})</span></p>
                                     <p class="text-gray-700">💨 現場陣風風速：<span class="font-bold">${w.wind} m/s</span></p>
                                 </div>`;
-                            weatherHtmlPdfInline = `<p class="text-xs text-gray-600 mt-1.5 border-t border-gray-200 pt-1.5">🌤️ 氣溫：${w.temp}°C | 💧 濕度：${w.hum}% | 🔥 熱指數：<span class="text-orange-600 font-bold">${w.heatIndex}</span></p>`;
+                            weatherHtmlPdfInline = `<p class="text-xs text-gray-600 mt-1.5 border-t border-gray-200 pt-1.5">🌤️ 氣溫：${w.temp}°C | 💧 濕度：${w.hum}% | 🔥 熱指數：<span class="${w.heatColor} font-bold">${w.heatIndex} (${w.heatLevel})</span></p>`;
                         } catch(e) {}
                     }
 
@@ -614,10 +612,9 @@
                                 const blobQr = await resQr.blob();
                                 qrCodeImg = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blobQr); });
                             }
-                        } catch(e) { console.warn("QR Error", e); }
+                        } catch(e) {}
                     }
 
-                    // ====== 網頁預覽版 HTML ======
                     let webMapHtml = '';
                     if (lat && lon) {
                         webMapHtml = `<p class="mt-2 text-sm font-bold text-blue-800 mb-1">📍 GPS 位置：${latLon} <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" class="text-blue-600 underline ml-2 text-xs bg-blue-50 px-2 py-1 rounded">🗺️ 開啟 Google 地圖</a></p>
@@ -645,7 +642,7 @@
                                     <h4 class="font-extrabold text-gray-800 text-lg border-b pb-1 mt-6 mb-4 flex items-center gap-2">📋 安全檢核項目</h4>`;
 
                     // ==========================================
-                    // 🚀 PDF 單一長畫布排版 (100% 防裁切)
+                    // 🚀 PDF 排版組裝
                     // ==========================================
                     let currentPdfHtml = `<div style="width: 800px; padding: 20px 40px; box-sizing: border-box; background: white; margin: 0 auto;">`;
                     
@@ -698,14 +695,12 @@
                         currentPdfHtml += pdfQBlock;
                         itemCount++;
 
-                        // 🔥 第 6 題結束強制寫入斷頁指令
                         if (itemCount === 6 && index < filteredQ.length - 1) { 
                             currentPdfHtml += `<div class="html2pdf__page-break"></div>`;
                             currentPdfHtml += PDF_HEADER_CONTINUED;
                         }
                     });
 
-                    // 處理 Footer
                     let overallPics = getVal(row, '現場整體照片'); let sigPic = getVal(row, '簽名檔');
                     
                     let webFooterBlock = `<div class="mt-8 avoid-break"><p class="font-extrabold text-gray-800 text-lg mb-3">📸 現場整體照片:</p>`;
@@ -719,7 +714,6 @@
                     webFooterBlock += `</div>`;
                     webHtml += webFooterBlock + `</div>`; 
 
-                    // PDF 底部 (使用 avoid-break 將照片與簽名強制綁在一起，絕對不切開)
                     let pdfFooterBlock = `<div class="avoid-break mt-4 border-t-2 border-gray-200 pt-4">`;
                     pdfFooterBlock += `<p class="font-bold text-gray-800 text-base mb-3 flex items-center gap-2">📸 現場整體照片:</p>`;
                     if (overallPics) {
@@ -770,13 +764,13 @@
                 const opt = {
                     margin: [10, 0, 10, 0], 
                     filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
-                    image: { type: 'jpeg', quality: 0.95 },
+                    image: { type: 'jpeg', quality: 0.95 }, 
                     html2canvas: { scale: 1.5, useCORS: true, logging: false, windowWidth: 800 }, 
                     jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' },
                     pagebreak: { mode: ['css', 'legacy'] } 
                 };
                 
-                // 🚀 使用 Promise 取得 PDF blob 檔案，串接 Web Share API，完成手機「一鍵原生的彈出分享」
+                // 🚀 執行純檔案分享，避免 iOS 產生 .txt
                 html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
                     pdfContainer.style.position = 'absolute'; pdfContainer.style.left = '-10000px'; pdfContainer.style.visibility = 'hidden';
                     mainBody.className = originalClasses; adminSection.style.display = 'block'; adminBtn.style.display = 'block';
@@ -786,13 +780,11 @@
                     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        // 【關鍵修改】：只傳遞 files，移除 text 與 title，解決 iOS 自動產生 .txt 檔的問題
                         navigator.share({
-                            files: [file],
-                            title: '職安巡檢報表',
-                            text: `${date} 現場職安巡檢日報表，請查收。`,
+                            files: [file]
                         }).catch(err => console.log('分享取消或失敗:', err));
                     } else {
-                        // 若裝置不支援 (例如電腦版瀏覽器)，則啟動傳統下載模式
                         const url = URL.createObjectURL(pdfBlob);
                         const a = document.createElement('a');
                         a.href = url;
