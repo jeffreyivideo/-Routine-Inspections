@@ -22,7 +22,6 @@
         .show-block { display: block; opacity: 1; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🚀 終極修復：單一長畫布排版，依賴 CSS 進行安全斷頁，防裁切防當機 */
         #pdfExportContainer { position: absolute; left: -10000px; top: 0; width: 800px; visibility: hidden; background: white; text-align: left; z-index: -1; }
         .html2pdf__page-break { page-break-before: always !important; }
         .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -98,8 +97,9 @@
             請選擇日期並點擊查詢。
         </div>
         
+        <!-- 🚀 變更按鈕文字以符合分享功能 -->
         <button id="downloadPdfBtn" onclick="downloadAdminReport()" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl hidden shadow-lg transition text-lg active:scale-95">
-            ⬇️ 將查詢結果匯出為 PDF 報表
+            📤 匯出並分享 PDF 報表
         </button>
     </div>
 
@@ -595,7 +595,7 @@
                                     <p class="mb-1 text-gray-700">🔥 換算熱指數：<span class="${w.heatColor} font-extrabold text-base">${w.heatIndex} (${w.heatLevel})</span></p>
                                     <p class="text-gray-700">💨 現場陣風風速：<span class="font-bold">${w.wind} m/s</span></p>
                                 </div>`;
-                            weatherHtmlPdfInline = `<p class="text-sm text-gray-600 mt-2 border-t border-gray-200 pt-2">🌤️ 氣溫：${w.temp}°C | 💧 濕度：${w.hum}% | 🔥 熱指數：<span class="text-orange-600 font-bold">${w.heatIndex}</span></p>`;
+                            weatherHtmlPdfInline = `<p class="text-xs text-gray-600 mt-1.5 border-t border-gray-200 pt-1.5">🌤️ 氣溫：${w.temp}°C | 💧 濕度：${w.hum}% | 🔥 熱指數：<span class="text-orange-600 font-bold">${w.heatIndex}</span></p>`;
                         } catch(e) {}
                     }
 
@@ -603,7 +603,6 @@
                     if(gpsStr.includes('query=')) { let match = gpsStr.match(/query=([^&"]+)/); if(match && match[1]) { latLon = match[1]; let parts = latLon.split(','); if(parts.length===2) { lat=parts[0].trim(); lon=parts[1].trim(); } } }
                     else if (gpsStr.includes(',')) { latLon = gpsStr.trim(); let parts = latLon.split(','); if(parts.length===2) { lat=parts[0].trim(); lon=parts[1].trim(); } }
                     
-                    // 🚀 超穩定 QR Code 載入引擎
                     let qrCodeImg = '';
                     if (lat && lon) {
                         try {
@@ -618,7 +617,7 @@
                         } catch(e) { console.warn("QR Error", e); }
                     }
 
-                    // ====== 網頁預覽版 HTML 組裝 ======
+                    // ====== 網頁預覽版 HTML ======
                     let webMapHtml = '';
                     if (lat && lon) {
                         webMapHtml = `<p class="mt-2 text-sm font-bold text-blue-800 mb-1">📍 GPS 位置：${latLon} <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" class="text-blue-600 underline ml-2 text-xs bg-blue-50 px-2 py-1 rounded">🗺️ 開啟 Google 地圖</a></p>
@@ -646,9 +645,8 @@
                                     <h4 class="font-extrabold text-gray-800 text-lg border-b pb-1 mt-6 mb-4 flex items-center gap-2">📋 安全檢核項目</h4>`;
 
                     // ==========================================
-                    // 🚀 PDF 絕對防裁切、計數精準斷頁法 (自然流動排版)
+                    // 🚀 PDF 單一長畫布排版 (100% 防裁切)
                     // ==========================================
-                    // 單一長容器，利用 page-break 讓系統自動分頁
                     let currentPdfHtml = `<div style="width: 800px; padding: 20px 40px; box-sizing: border-box; background: white; margin: 0 auto;">`;
                     
                     const pdfBasicInfo = `
@@ -690,7 +688,6 @@
                         webQBlock += `</div>`;
                         webHtml += webQBlock; 
 
-                        // PDF 題目 
                         let pdfQBlock = `<div class="bg-white p-3 rounded-lg border border-gray-100 mb-3 avoid-break">
                                         <p class="font-bold text-gray-800 text-sm mb-1">[${q.category}] ${q.item}</p>
                                         <p class="text-xs text-gray-400 mb-2 leading-relaxed">${q.standard}</p>
@@ -701,7 +698,7 @@
                         currentPdfHtml += pdfQBlock;
                         itemCount++;
 
-                        // 🔥 精準斷頁：滿 6 題，且不是最後一題時，強制斷頁！
+                        // 🔥 第 6 題結束強制寫入斷頁指令
                         if (itemCount === 6 && index < filteredQ.length - 1) { 
                             currentPdfHtml += `<div class="html2pdf__page-break"></div>`;
                             currentPdfHtml += PDF_HEADER_CONTINUED;
@@ -722,7 +719,7 @@
                     webFooterBlock += `</div>`;
                     webHtml += webFooterBlock + `</div>`; 
 
-                    // PDF 底部 (緊緻且保證與題目黏在一起)
+                    // PDF 底部 (使用 avoid-break 將照片與簽名強制綁在一起，絕對不切開)
                     let pdfFooterBlock = `<div class="avoid-break mt-4 border-t-2 border-gray-200 pt-4">`;
                     pdfFooterBlock += `<p class="font-bold text-gray-800 text-base mb-3 flex items-center gap-2">📸 現場整體照片:</p>`;
                     if (overallPics) {
@@ -737,7 +734,7 @@
                     pdfFooterBlock += `</div></div>`;
 
                     currentPdfHtml += pdfFooterBlock;
-                    currentPdfHtml += `</div>`; // Close main container
+                    currentPdfHtml += `</div>`; 
                     
                     if (i < data.length - 1) {
                         currentPdfHtml += `<div class="html2pdf__page-break"></div>`;
@@ -769,24 +766,46 @@
             pdfContainer.style.position = 'relative'; pdfContainer.style.left = '0'; pdfContainer.style.visibility = 'visible';
 
             setTimeout(() => {
-                btn.innerHTML = '🔄 PDF 產出中，請勿關閉網頁...';
+                btn.innerHTML = '🔄 系統轉換中，請勿關閉網頁...';
                 const opt = {
-                    margin: [10, 0, 10, 0], // 交給 PDF 原生處理安全邊距
+                    margin: [10, 0, 10, 0], 
                     filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
-                    image: { type: 'jpeg', quality: 0.95 }, // 微降畫質防當機
-                    html2canvas: { scale: 1.5, useCORS: true, logging: false, windowWidth: 800 }, // 降 Scale 防 iOS 崩潰
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { scale: 1.5, useCORS: true, logging: false, windowWidth: 800 }, 
                     jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'legacy'] } // 讓系統看懂我們安插的強制斷頁與避免切斷指令
+                    pagebreak: { mode: ['css', 'legacy'] } 
                 };
                 
-                html2pdf().set(opt).from(pdfContainer).save().then(() => {
+                // 🚀 使用 Promise 取得 PDF blob 檔案，串接 Web Share API，完成手機「一鍵原生的彈出分享」
+                html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
                     pdfContainer.style.position = 'absolute'; pdfContainer.style.left = '-10000px'; pdfContainer.style.visibility = 'hidden';
                     mainBody.className = originalClasses; adminSection.style.display = 'block'; adminBtn.style.display = 'block';
-                    btn.innerHTML = '⬇️ 將查詢結果匯出為 PDF 報表';
+                    btn.innerHTML = '📤 匯出並分享 PDF 報表';
+
+                    const fileName = `信實集團_職安巡檢日報表_${date}.pdf`;
+                    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        navigator.share({
+                            files: [file],
+                            title: '職安巡檢報表',
+                            text: `${date} 現場職安巡檢日報表，請查收。`,
+                        }).catch(err => console.log('分享取消或失敗:', err));
+                    } else {
+                        // 若裝置不支援 (例如電腦版瀏覽器)，則啟動傳統下載模式
+                        const url = URL.createObjectURL(pdfBlob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }
                 }).catch(err => {
                     pdfContainer.style.position = 'absolute'; pdfContainer.style.left = '-10000px'; pdfContainer.style.visibility = 'hidden';
                     mainBody.className = originalClasses; adminSection.style.display = 'block'; adminBtn.style.display = 'block';
-                    btn.innerHTML = '⬇️ 將查詢結果匯出為 PDF 報表'; alert("PDF 產出過程發生錯誤，請稍後重試。");
+                    btn.innerHTML = '📤 匯出並分享 PDF 報表'; alert("產生失敗，請稍後重試。");
                 });
             }, 600); 
         }
