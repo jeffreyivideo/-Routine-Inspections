@@ -22,9 +22,10 @@
         .show-block { display: block; opacity: 1; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🚀 終極 A4 積木鎖死：禁止任何原生 margin，強制使用純淨白紙 */
+        /* 🚀 終極修復：移除固定高度，讓畫布自然延伸，依賴 CSS Page Break 進行完美裁切，徹底消滅空白頁 */
         #pdfExportContainer { position: absolute; left: -10000px; top: 0; width: 800px; visibility: hidden; background: white; text-align: left; z-index: -1; }
         .html2pdf__page-break { page-break-before: always !important; margin: 0 !important; border: 0 !important; padding: 0 !important; }
+        .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; }
         
         input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: #2563eb; }
         select optgroup { font-weight: 900; font-size: 1.25rem; }
@@ -344,8 +345,9 @@
             }
         }
 
+        // 🚀 全面導入安全重試與防快取機制 (適用於所有 API 呼叫)
         function fetchWithRetry(url, retries = 2) {
-            return fetch(url, { redirect: 'follow' })
+            return fetch(url, { redirect: 'follow', cache: 'no-store' })
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     return res.text(); 
@@ -382,11 +384,7 @@
             fetchWithRetry(url)
             .then(text => {
                 let authRes;
-                try {
-                    authRes = JSON.parse(text);
-                } catch (e) {
-                    throw new Error("回傳格式異常，請確認您的 GAS 權限是否設為「所有人」。");
-                }
+                try { authRes = JSON.parse(text); } catch (e) { throw new Error("回傳格式異常"); }
                 
                 if (authRes.status !== "success") {
                     alert('❌ 登入失敗：查無此員工姓名或生日錯誤！');
@@ -403,13 +401,13 @@
                         questionData = JSON.parse(qText);
                         finishLogin(name);
                     }).catch(err => {
-                        alert('題庫下載失敗：' + err.message + '\n請檢查網路或稍後再試。');
+                        alert('題庫下載失敗，請檢查網路或稍後再試。');
                         btn.innerHTML = '進入巡檢系統'; btn.disabled = false;
                     });
                 }
             })
             .catch(err => { 
-                alert('系統連線失敗：' + err.message + '\n\n建議：\n1. 檢查手機網路訊號\n2. 重新整理網頁再試一次'); 
+                alert('系統連線不穩，請檢查網路或稍後再試。'); 
                 btn.innerHTML = '進入巡檢系統'; btn.disabled = false; 
             });
         }
@@ -553,15 +551,18 @@
             }).catch(error => { alert('提交失敗'); submitBtn.innerHTML = '📤 傳送巡檢紀錄'; submitBtn.disabled = false; });
         }
 
+        // ==========================================
+        // 🚀 PDF 表頭與接續頁模版
+        // ==========================================
         const PDF_HEADER_TEMPLATE = `
-            <div class="flex items-center justify-center gap-3 pb-3 border-b border-gray-200 mb-4">
+            <div class="flex items-center justify-center gap-3 pb-3 border-b border-gray-200 mb-4 avoid-break">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-8 object-contain" crossorigin="anonymous">
                 <h3 class="font-bold text-2xl text-gray-800 tracking-wider">現場職安巡檢日報表</h3>
             </div>
         `;
         
         const PDF_HEADER_CONTINUED = `
-            <div class="flex items-center justify-center gap-3 pb-3 border-b border-gray-200 mb-4">
+            <div class="flex items-center justify-center gap-3 pb-3 border-b border-gray-200 mb-4 avoid-break">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-8 object-contain" crossorigin="anonymous">
                 <h3 class="font-bold text-2xl text-gray-800 tracking-wider">現場職安巡檢日報表</h3>
             </div>
@@ -581,9 +582,11 @@
             switchView(currentUser ? 'form' : 'login');
         }
 
+        // 🚀 將防快取套用到日曆讀取
         function fetchRecordedDatesAndRender() {
-            fetch(`${GOOGLE_SCRIPT_URL}?action=getRecordedDates`)
-            .then(res => res.json())
+            const timestamp = new Date().getTime();
+            fetchWithRetry(`${GOOGLE_SCRIPT_URL}?action=getRecordedDates&t=${timestamp}`)
+            .then(text => JSON.parse(text))
             .then(dates => {
                 recordedDatesList = Array.isArray(dates) ? dates : [];
                 renderCalendar();
@@ -661,14 +664,17 @@
             }
         }
 
+        // 🚀 將防快取套用到報表讀取
         function fetchReports() {
             const date = document.getElementById('reportDate').value; if (!date) return;
             const reportContent = document.getElementById('reportContent');
             reportContent.innerHTML = '🔄 資料同步與報表生成中，請稍候...';
 
-            let loadQ = questionData.length === 0 ? fetch(GOOGLE_SCRIPT_URL).then(res => res.json()).then(data => { questionData = data; }) : Promise.resolve();
+            const timestamp = new Date().getTime();
+            let loadQ = questionData.length === 0 ? fetchWithRetry(`${GOOGLE_SCRIPT_URL}?t=${timestamp}`).then(text => { questionData = JSON.parse(text); }) : Promise.resolve();
 
-            loadQ.then(() => fetch(`${GOOGLE_SCRIPT_URL}?action=getReports&date=${date}`).then(res => res.json()))
+            loadQ.then(() => fetchWithRetry(`${GOOGLE_SCRIPT_URL}?action=getReports&date=${date}&t=${timestamp}`))
+            .then(text => JSON.parse(text))
             .then(async (data) => {
                 if (!Array.isArray(data) || data.length === 0) { 
                     reportContent.innerHTML = `
@@ -711,18 +717,19 @@
                     if(gpsStr.includes('query=')) { let match = gpsStr.match(/query=([^&"]+)/); if(match && match[1]) { latLon = match[1]; let parts = latLon.split(','); if(parts.length===2) { lat=parts[0].trim(); lon=parts[1].trim(); } } }
                     else if (gpsStr.includes(',')) { latLon = gpsStr.trim(); let parts = latLon.split(','); if(parts.length===2) { lat=parts[0].trim(); lon=parts[1].trim(); } }
                     
+                    // 🚀 極速且防卡死的 QR Code 生成器 (Google Chart API + 1.5秒極限逾時設定)
                     let qrCodeImg = '';
                     if (lat && lon) {
                         try {
                             const gmapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-                            const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(gmapUrl)}&size=150&margin=0`;
-                            const controller = new AbortController(); const timeoutId = setTimeout(() => controller.abort(), 5000); 
+                            const qrUrl = `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encodeURIComponent(gmapUrl)}&choe=UTF-8`;
+                            const controller = new AbortController(); const timeoutId = setTimeout(() => controller.abort(), 1500); 
                             const resQr = await fetch(qrUrl, { signal: controller.signal }); clearTimeout(timeoutId);
                             if(resQr.ok) {
                                 const blobQr = await resQr.blob();
                                 qrCodeImg = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blobQr); });
                             }
-                        } catch(e) { console.warn("QR Error", e); }
+                        } catch(e) { console.warn("QR Error - Skipped to prevent blocking", e); }
                     }
 
                     let webMapHtml = '';
@@ -752,7 +759,7 @@
                                     <h4 class="font-extrabold text-gray-800 text-lg border-b pb-1 mt-6 mb-4 flex items-center gap-2">📋 安全檢核項目</h4>`;
 
                     // ==========================================
-                    // 🚀 PDF 積木式排版：每個 div 強制化身為 A4 畫布，保證絕無空白斷層
+                    // 🚀 PDF 積木式排版演算法：移除固定高度，改讓畫布自然延伸！
                     // ==========================================
                     const pdfBasicInfo = `
                         <div class="mb-3">
@@ -775,8 +782,8 @@
                             ${qrCodeImg ? `<img src="${qrCodeImg}" class="w-14 h-14 object-contain mix-blend-multiply" />` : ''}
                         </div>`;
 
-                    // 建立第一張虛擬 A4 紙 (800x1131 是完美的 96DPI A4 比例)
-                    let currentPdfPageHtml = `<div style="width: 800px; height: 1131px; padding: 40px 50px; box-sizing: border-box; background: white; overflow: hidden; position: relative;">` + PDF_HEADER_TEMPLATE + pdfBasicInfo + pdfMapBlock + `<h4 class="font-bold text-gray-800 text-sm mb-2 flex items-center gap-2">📋 安全檢核項目明細：</h4>`;
+                    // 🚀 放棄固定高度，只綁死寬度，讓內容往下長
+                    let currentPdfPageHtml = `<div style="width: 800px; padding: 30px 40px; box-sizing: border-box; background: white; margin: 0 auto;">` + PDF_HEADER_TEMPLATE + pdfBasicInfo + pdfMapBlock + `<h4 class="font-bold text-gray-800 text-sm mb-2 flex items-center gap-2">📋 安全檢核項目明細：</h4>`;
                     
                     let itemCount = 0;
 
@@ -801,11 +808,11 @@
                         webQBlock += `</div>`;
                         webHtml += webQBlock; 
 
-                        // PDF版 Block (字體大)
-                        let pdfQBlock = `<div class="bg-white p-3 rounded-lg border border-gray-100 mb-2.5">
-                                        <p class="font-bold text-gray-800 text-sm mb-1">[${q.category}] ${q.item}</p>
-                                        <p class="text-xs text-gray-400 mb-1.5 leading-relaxed">${q.standard}</p>
-                                        <p class="text-sm font-bold text-gray-800">檢查結果：<span class="${result==='異常'?'text-red-600':(result==='正常'?'text-green-600':'text-gray-500')}">${result}</span> ${note?`<span class="text-gray-500 font-normal ml-2">(說明：${note})</span>`:''}</p>`;
+                        // PDF版 Block
+                        let pdfQBlock = `<div class="bg-white p-2.5 rounded-lg border border-gray-100 mb-2 avoid-break">
+                                        <p class="font-bold text-gray-800 text-xs mb-1">[${q.category}] ${q.item}</p>
+                                        <p class="text-[10px] text-gray-400 mb-1.5 leading-relaxed">${q.standard}</p>
+                                        <p class="text-xs font-bold text-gray-800">檢查結果：<span class="${result==='異常'?'text-red-600':(result==='正常'?'text-green-600':'text-gray-500')}">${result}</span> ${note?`<span class="text-gray-500 font-normal ml-2">(說明：${note})</span>`:''}</p>`;
                         if (picUrls.length > 0) {
                             pdfQBlock += `<div class="mt-2 pt-2 border-t border-gray-100"><div class="flex flex-wrap gap-2">`;
                             picUrls.forEach(u => { pdfQBlock += `<img src="${u}" class="h-16 object-contain rounded border border-gray-200" crossorigin="anonymous">`; });
@@ -816,12 +823,12 @@
                         currentPdfPageHtml += pdfQBlock;
                         itemCount++;
 
-                        // 🚀 精準斷頁機制：一旦塞滿 6 題，就把這張 A4 封裝，開新頁
-                        if (itemCount % 6 === 0 && index < filteredQ.length - 1) {
-                            currentPdfPageHtml += `</div>`; // 封裝這張 A4 紙
+                        // 🚀 第 6 題一滿，立刻無情打斷，換下一頁！
+                        if (itemCount === 6 && index < filteredQ.length - 1) {
+                            currentPdfPageHtml += `</div>`; // 封裝積木
                             pdfHtmlPages.push(currentPdfPageHtml); // 歸檔
-                            // 開啟全新的 A4 紙
-                            currentPdfPageHtml = `<div style="width: 800px; height: 1131px; padding: 40px 50px; box-sizing: border-box; background: white; overflow: hidden; position: relative;">` + PDF_HEADER_CONTINUED;
+                            // 開啟全新的頁面
+                            currentPdfPageHtml = `<div style="width: 800px; padding: 30px 40px; box-sizing: border-box; background: white; margin: 0 auto;">` + PDF_HEADER_CONTINUED;
                         }
                     });
 
@@ -846,19 +853,8 @@
                     webFooterBlock += `</div>`;
                     webHtml += webFooterBlock + `</div>`; 
 
-                    // 檢查最後一頁如果只剩下照片跟簽名，會不會超過 A4 物理高度
-                    // 如果超過，強制把 Footer 推到新的一頁
-                    let footerIsLarge = overallPics ? (overallPics.split('\n').filter(u => u.startsWith('http')).length > 4) : false;
-                    
-                    if (itemCount % 6 >= 4 || footerIsLarge) { 
-                        // 如果這頁已經超過 4 題，或者照片很多，為了防止簽名被截斷，強制新開一頁給 Footer
-                        currentPdfPageHtml += `</div>`;
-                        pdfHtmlPages.push(currentPdfPageHtml);
-                        currentPdfPageHtml = `<div style="width: 800px; height: 1131px; padding: 40px 50px; box-sizing: border-box; background: white; overflow: hidden; position: relative;">` + PDF_HEADER_CONTINUED;
-                    }
-
-                    // PDF 頁尾 (照片與簽名)，保證絕對不切到
-                    let pdfFooterBlock = `<div class="mt-4 border-t border-gray-200 pt-4">`;
+                    // 🚀 將 Footer 穩穩地塞進最後一張積木的最底部，不再強迫自己換頁
+                    let pdfFooterBlock = `<div class="avoid-break mt-4 border-t border-gray-200 pt-4">`;
                     pdfFooterBlock += `<p class="font-bold text-gray-800 text-sm mb-2 flex items-center gap-2">📸 現場整體照片:</p>`;
                     if (overallPics) {
                         pdfFooterBlock += `<div class="flex flex-wrap gap-2 mb-4">`;
@@ -879,13 +875,13 @@
                     pdfFooterBlock += `</div></div>`;
 
                     currentPdfPageHtml += pdfFooterBlock;
-                    currentPdfPageHtml += `</div>`; // 封裝最後一張 A4
+                    currentPdfPageHtml += `</div>`; // 封裝最後一張積木
                     
-                    pdfHtmlPages.push(currentPdfPageHtml); // 歸檔最後一張
+                    pdfHtmlPages.push(currentPdfPageHtml); // 歸檔
                 }
 
                 document.getElementById('reportContent').innerHTML = webHtml;
-                // 將所有完美實體的 A4 積木組裝起來，中間插入原生的 page-break
+                // 利用原生的 html2pdf__page-break 來連接每一塊積木，乾淨俐落！
                 document.getElementById('pdfExportContainer').innerHTML = pdfHtmlPages.join('<div class="html2pdf__page-break"></div>');
                 document.getElementById('downloadPdfBtn').classList.remove('hidden');
             }).catch(err => { 
@@ -909,13 +905,14 @@
 
             setTimeout(() => {
                 btn.innerHTML = '🔄 系統轉換中，請勿關閉網頁...';
-                // 🚀 完全消除 Margin Bug：透過 jsPDF 絕對相容模式，將所有外距清零
+                // 🚀 完全放手讓 html2pdf 處理 margin 與換頁，確保絕無白頁！
                 const opt = {
-                    margin: 0, 
+                    margin: [10, 0, 10, 0], 
                     filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
-                    image: { type: 'jpeg', quality: 1.0 }, 
-                    html2canvas: { scale: 2, useCORS: true, logging: false }, 
-                    jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
+                    image: { type: 'jpeg', quality: 0.98 }, 
+                    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800 }, 
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: 'css' }
                 };
                 
                 html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
