@@ -39,7 +39,7 @@
         ⚙️ 後台管理
     </button>
 
-    <!-- 登入區塊 (改用 JS 控制 display) -->
+    <!-- 登入區塊 -->
     <div id="loginSection" class="glass-panel w-full max-w-md rounded-2xl p-6 sm:p-8 transform transition-all mt-16 sm:mt-0">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-extrabold text-gray-800 flex flex-col items-center justify-center gap-3 tracking-tight">
@@ -50,8 +50,7 @@
         <div class="space-y-6">
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">👤 員工姓名</label>
-                <!-- 🚀 移除強制過濾語法，解決注音打不出來的問題 -->
-                <input type="text" id="empName" placeholder="輸入中文姓名" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
+                <input type="text" id="empName" placeholder="輸入中文姓名" oninput="this.value = this.value.replace(/[^\u4E00-\u9FA5]/g, '');" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">📅 出生年月日 (如 801230)</label>
@@ -135,7 +134,6 @@
                 </div>
             </div>
 
-            <!-- 自動氣象與熱危害資訊區塊 -->
             <div id="weatherBlock" class="hidden-smooth flex-col mt-2 bg-blue-50 border border-blue-200 rounded-2xl p-4 shadow-sm">
                 <div class="flex items-center gap-2 mb-3">
                     <h4 class="font-extrabold text-blue-800 text-lg">🌤️ 現場氣象與熱危害資訊</h4>
@@ -222,12 +220,10 @@
         
         let currentUser = ''; let uploadedPhotos = {}; let questionData = []; let generalPhotosList = []; 
         let globalPdfHtml = ''; let currentWeatherData = null;
-        
         let recordedDatesList = [];
         let calYear = new Date().getFullYear();
         let calMonth = new Date().getMonth(); 
 
-        // 🚀 視窗切換防疊加模組
         function switchView(view) {
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('formSection').style.display = 'none';
@@ -239,8 +235,6 @@
             
             document.getElementById('adminBtn').style.display = (view === 'admin' || view === 'login') ? 'none' : 'block';
         }
-        
-        // 初始設定為登入頁面
         switchView('login');
 
         function compressImage(file, callback) {
@@ -257,7 +251,6 @@
             }; reader.readAsDataURL(file);
         }
 
-        // 🚀 整體照片模組升級：保留新增能力，並可單張刪除
         document.getElementById('generalPhoto').addEventListener('change', function(e) {
             Array.from(e.target.files).forEach(file => {
                 compressImage(file, function(base64) {
@@ -265,7 +258,7 @@
                     renderGeneralPhotos();
                 });
             });
-            e.target.value = ''; // 允許重新選取相同檔案
+            e.target.value = ''; 
         });
 
         function renderGeneralPhotos() {
@@ -349,7 +342,6 @@
             }
         }
 
-        // 🚀 加速模組：平行發送驗證與下載題庫請求
         function handleLogin() {
             const name = document.getElementById('empName').value.trim(); 
             const dob = document.getElementById('empDob').value.trim();
@@ -395,6 +387,10 @@
             const task = document.getElementById('taskType').value; const dq = document.getElementById('dynamicQuestions');
             const container = document.getElementById('checklistContainer');
             dq.innerHTML = ''; uploadedPhotos = {};
+            
+            isCanvasSized = false; // 重置畫布鎖定狀態
+            clearSignature(); // 清除之前可能殘留的筆畫追蹤
+
             if(!task) { container.classList.remove('show-smooth'); return; } container.classList.add('show-smooth');
 
             const filteredQuestions = questionData.filter(q => !q.applicable || q.applicable === "通用" || q.applicable.includes(task));
@@ -412,7 +408,6 @@
                         
                         <div id="${qId}_exception" class="hidden-smooth flex-col mt-4 p-4 bg-red-50 border border-red-100 rounded-xl space-y-4">
                             <input type="text" id="${qId}Note" placeholder="✍️ 異常狀況說明 *" class="w-full px-4 py-3 text-base rounded-lg border border-red-200 outline-none focus:border-red-400">
-                            <!-- 🚀 升級異常照片支援多選與單獨刪除 -->
                             <input type="file" accept="image/*" multiple onchange="handleExceptionPhoto('${qId}', this)" class="w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-white file:text-red-700 file:border file:border-red-200 hover:file:bg-red-100 shadow-sm cursor-pointer">
                             <div id="${qId}_photoPreview" class="flex flex-wrap gap-3 mt-2"></div>
                         </div>
@@ -431,7 +426,6 @@
             }
         }
 
-        // 🚀 異常照片模組升級：支援多張並可單獨刪除
         function handleExceptionPhoto(qId, input) {
             if (!uploadedPhotos[qId]) uploadedPhotos[qId] = [];
             Array.from(input.files).forEach(file => {
@@ -465,13 +459,29 @@
 
         function checkCompletion() {
             const total = document.querySelectorAll('.question-block').length; const answered = document.querySelectorAll('input[type="radio"]:checked').length;
-            if (answered === total && total > 0) { document.getElementById('signatureSection').classList.add('show-smooth'); document.getElementById('submitBtn').classList.add('show-smooth'); resizeCanvas(); }
+            if (answered === total && total > 0) { 
+                document.getElementById('signatureSection').classList.add('show-smooth'); 
+                document.getElementById('submitBtn').classList.add('show-smooth'); 
+                setTimeout(resizeCanvas, 100); // 確保容器有尺寸後再初始化畫布
+            }
         }
 
         const canvas = document.getElementById('signaturePad'); const ctx = canvas.getContext('2d');
         let isDrawing = false, signatureDistance = 0, lastPos = {x: 0, y: 0}, minX = 9999, maxX = 0, strokeCount = 0; 
-        function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); canvas.width = canvas.offsetWidth * ratio; canvas.height = canvas.offsetHeight * ratio; ctx.scale(ratio, ratio); ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a'; }
-        window.addEventListener('resize', resizeCanvas);
+        let isCanvasSized = false; // 🚀 鎖定狀態：防止手機縮放時清空畫布
+        
+        function resizeCanvas() { 
+            if (isCanvasSized || canvas.offsetWidth === 0) return; // 已經設定過就不再觸發清空
+            const ratio = Math.max(window.devicePixelRatio || 1, 1); 
+            canvas.width = canvas.offsetWidth * ratio; 
+            canvas.height = canvas.offsetHeight * ratio; 
+            ctx.scale(ratio, ratio); 
+            ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a'; 
+            isCanvasSized = true; 
+        }
+        
+        // 🚀 關鍵修復：移除了全域的 resize 監聽器，杜絕手機滑動導致畫布透明化！
+        
         function getPos(e) { const rect = canvas.getBoundingClientRect(); return e.type.includes('touch') ? { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top } : { x: e.clientX - rect.left, y: e.clientY - rect.top }; }
         function startDrawing(e) { isDrawing = true; lastPos = getPos(e); strokeCount++; if(lastPos.x < minX) minX = lastPos.x; if(lastPos.x > maxX) maxX = lastPos.x; ctx.beginPath(); ctx.moveTo(lastPos.x, lastPos.y); e.preventDefault(); }
         function draw(e) { if (!isDrawing) return; e.preventDefault(); const currentPos = getPos(e); if(currentPos.x < minX) minX = currentPos.x; if(currentPos.x > maxX) maxX = currentPos.x; ctx.lineTo(currentPos.x, currentPos.y); ctx.stroke(); signatureDistance += Math.sqrt(Math.pow(currentPos.x - lastPos.x, 2) + Math.pow(currentPos.y - lastPos.y, 2)); lastPos = currentPos; }
@@ -770,7 +780,9 @@
                         }
                     });
 
-                    let overallPics = getVal(row, '現場整體照片'); let sigPic = getVal(row, '簽名檔');
+                    let overallPics = getVal(row, '現場整體照片'); 
+                    // 🚀 智慧抓取簽名：相容多種欄位名稱，避免抓不到
+                    let sigPic = getVal(row, '簽名檔') || getVal(row, '簽名') || getVal(row, '巡檢員簽名') || getVal(row, '巡檢人員簽名確認');
                     
                     let webFooterBlock = `<div class="mt-8 avoid-break"><p class="font-extrabold text-gray-800 text-lg mb-3">📸 現場整體照片:</p>`;
                     if (overallPics) {
@@ -779,7 +791,15 @@
                         webFooterBlock += `</div>`;
                     } else webFooterBlock += `<p class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded inline-block">無</p>`;
                     webFooterBlock += `</div><div class="border-t-2 border-gray-300 pt-5 mt-8 flex flex-col items-end gap-3 avoid-break"><p class="font-extrabold text-gray-800 text-lg">巡檢人員簽名確認:</p>`;
-                    if (sigPic && sigPic.startsWith('http')) webFooterBlock += `<img src="${sigPic}" class="h-20 sm:h-24 object-contain" crossorigin="anonymous">`;
+                    
+                    // 🚀 網頁版防呆：顯示透明圖或異常狀態
+                    if (sigPic && sigPic.startsWith('http')) {
+                        webFooterBlock += `<img src="${sigPic}" class="h-20 sm:h-24 object-contain" crossorigin="anonymous">`;
+                    } else if (sigPic) {
+                        webFooterBlock += `<p class="text-sm font-bold text-red-500">${sigPic}</p>`;
+                    } else {
+                        webFooterBlock += `<p class="text-sm font-bold text-gray-400">未簽名</p>`;
+                    }
                     webFooterBlock += `</div>`;
                     webHtml += webFooterBlock + `</div>`; 
 
@@ -793,7 +813,15 @@
                         pdfFooterBlock += `<p class="text-xs text-gray-400 mb-4">無</p>`;
                     }
                     pdfFooterBlock += `<div class="flex flex-col items-end gap-2"><p class="font-bold text-gray-800 text-sm tracking-wider">巡檢人員簽名確認:</p>`;
-                    if (sigPic && sigPic.startsWith('http')) pdfFooterBlock += `<img src="${sigPic}" class="h-16 object-contain" crossorigin="anonymous">`;
+                    
+                    // 🚀 PDF版防呆：顯示透明圖或異常狀態
+                    if (sigPic && sigPic.startsWith('http')) {
+                        pdfFooterBlock += `<img src="${sigPic}" class="h-16 object-contain" crossorigin="anonymous">`;
+                    } else if (sigPic) {
+                        pdfFooterBlock += `<p class="text-xs font-bold text-red-500">${sigPic}</p>`;
+                    } else {
+                        pdfFooterBlock += `<p class="text-xs font-bold text-gray-400">未簽名</p>`;
+                    }
                     pdfFooterBlock += `</div></div>`;
 
                     currentPdfHtml += pdfFooterBlock;
@@ -839,7 +867,6 @@
                     pagebreak: { mode: ['css', 'legacy'] } 
                 };
                 
-                // 🚀 純檔案分享，解決 iOS 自動產生 .txt 檔的問題
                 html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
                     pdfContainer.style.position = 'absolute'; pdfContainer.style.left = '-10000px'; pdfContainer.style.visibility = 'hidden';
                     mainBody.className = originalClasses; adminSection.style.display = 'block'; adminBtn.style.display = 'block';
