@@ -31,17 +31,16 @@
         select option { font-weight: 700; font-size: 1.1rem; }
     </style>
 </head>
-<body id="mainBody" class="app-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
+<body id="mainBody" class="app-bg min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-4">
 
-    <!-- 實體的 PDF 渲染容器 -->
     <div id="pdfExportContainer"></div>
 
     <button id="adminBtn" onclick="openAdminPanel()" class="absolute top-4 left-4 bg-slate-700 text-white px-4 py-2 rounded-xl text-sm shadow opacity-80 hover:opacity-100 transition z-50">
         ⚙️ 後台管理
     </button>
 
-    <!-- 登入區塊 -->
-    <div id="loginSection" class="glass-panel w-full max-w-md rounded-2xl p-6 sm:p-8 transform transition-all mt-10 sm:mt-0">
+    <!-- 登入區塊 (改用 JS 控制 display) -->
+    <div id="loginSection" class="glass-panel w-full max-w-md rounded-2xl p-6 sm:p-8 transform transition-all mt-16 sm:mt-0">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-extrabold text-gray-800 flex flex-col items-center justify-center gap-3 tracking-tight">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-12 object-contain" crossorigin="anonymous">
@@ -51,7 +50,8 @@
         <div class="space-y-6">
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">👤 員工姓名</label>
-                <input type="text" id="empName" placeholder="輸入中文姓名" oninput="this.value = this.value.replace(/[^\u4E00-\u9FA5]/g, '');" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
+                <!-- 🚀 移除強制過濾語法，解決注音打不出來的問題 -->
+                <input type="text" id="empName" placeholder="輸入中文姓名" class="w-full px-5 py-4 rounded-xl border-2 border-gray-200 outline-none text-lg">
             </div>
             <div>
                 <label class="block text-base font-bold text-blue-800 mb-2">📅 出生年月日 (如 801230)</label>
@@ -64,7 +64,7 @@
     </div>
 
     <!-- 後台報表下載區塊 -->
-    <div id="adminSection" class="glass-panel w-full max-w-4xl rounded-2xl p-5 sm:p-8 hidden max-h-[90vh] overflow-y-auto mt-10 sm:mt-0">
+    <div id="adminSection" class="glass-panel w-full max-w-4xl rounded-2xl p-5 sm:p-8 mt-16 sm:mt-0" style="display: none;">
         <div class="flex justify-between items-center mb-4 border-b-2 border-gray-200 pb-3">
             <h2 class="text-xl sm:text-2xl font-extrabold text-gray-800 flex items-center gap-2">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-6 sm:h-8" crossorigin="anonymous">
@@ -103,7 +103,7 @@
     </div>
 
     <!-- 巡檢表單區塊 -->
-    <div id="formSection" class="glass-panel w-full max-w-3xl rounded-3xl p-5 sm:p-8 hidden max-h-[95vh] overflow-y-auto mt-10 sm:mt-0">
+    <div id="formSection" class="glass-panel w-full max-w-3xl rounded-3xl p-5 sm:p-8 mt-16 sm:mt-0" style="display: none;">
         <div class="flex flex-col gap-4 mb-6 border-b-2 border-gray-200 pb-5">
             <h2 class="text-3xl font-extrabold text-gray-800 flex items-center justify-center sm:justify-start gap-3">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" alt="Logo" class="h-10" crossorigin="anonymous">
@@ -227,6 +227,22 @@
         let calYear = new Date().getFullYear();
         let calMonth = new Date().getMonth(); 
 
+        // 🚀 視窗切換防疊加模組
+        function switchView(view) {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('adminSection').style.display = 'none';
+            
+            if (view === 'login') document.getElementById('loginSection').style.display = 'block';
+            if (view === 'form') document.getElementById('formSection').style.display = 'block';
+            if (view === 'admin') document.getElementById('adminSection').style.display = 'block';
+            
+            document.getElementById('adminBtn').style.display = (view === 'admin' || view === 'login') ? 'none' : 'block';
+        }
+        
+        // 初始設定為登入頁面
+        switchView('login');
+
         function compressImage(file, callback) {
             const reader = new FileReader();
             reader.onload = function(event) {
@@ -241,17 +257,34 @@
             }; reader.readAsDataURL(file);
         }
 
+        // 🚀 整體照片模組升級：保留新增能力，並可單張刪除
         document.getElementById('generalPhoto').addEventListener('change', function(e) {
-            const files = e.target.files; const previewContainer = document.getElementById('generalPhotoPreview');
-            previewContainer.innerHTML = ''; generalPhotosList = []; 
-            Array.from(files).forEach(file => {
-                compressImage(file, function(compressedBase64) {
-                    generalPhotosList.push(compressedBase64);
-                    const img = document.createElement('img'); img.src = compressedBase64;
-                    img.className = 'w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-xl shadow-md border border-gray-300'; previewContainer.appendChild(img);
+            Array.from(e.target.files).forEach(file => {
+                compressImage(file, function(base64) {
+                    generalPhotosList.push(base64);
+                    renderGeneralPhotos();
                 });
             });
+            e.target.value = ''; // 允許重新選取相同檔案
         });
+
+        function renderGeneralPhotos() {
+            const container = document.getElementById('generalPhotoPreview');
+            container.innerHTML = '';
+            generalPhotosList.forEach((base64, index) => {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="relative inline-block mt-2">
+                        <img src="${base64}" class="h-24 w-24 sm:w-32 sm:h-32 object-cover rounded-xl border border-gray-300 shadow-sm">
+                        <button type="button" onclick="removeGeneralPhoto(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-lg font-bold shadow-md active:scale-95 focus:outline-none">×</button>
+                    </div>
+                `);
+            });
+        }
+
+        function removeGeneralPhoto(index) {
+            generalPhotosList.splice(index, 1);
+            renderGeneralPhotos();
+        }
 
         function setTodayDate() {
             const today = new Date();
@@ -274,7 +307,6 @@
                 const heatIndex = current.apparent_temperature;
                 const wind = current.wind_speed_10m;
 
-                // 🔥 已更新為勞動部最新官方四級標準
                 let heatLevel = "未達預警標準"; let heatColor = "text-gray-500";
                 if (heatIndex >= 26.7 && heatIndex < 32.2) { heatLevel = "第一級：注意"; heatColor = "text-green-600"; }
                 else if (heatIndex >= 32.2 && heatIndex < 40.6) { heatLevel = "第二級：格外注意"; heatColor = "text-yellow-600"; }
@@ -317,9 +349,11 @@
             }
         }
 
+        // 🚀 加速模組：平行發送驗證與下載題庫請求
         function handleLogin() {
             const name = document.getElementById('empName').value.trim(); 
             const dob = document.getElementById('empDob').value.trim();
+            const btn = document.getElementById('loginBtn');
             
             const chineseRegex = /^[\u4E00-\u9FA5]+$/;
             if (!name || !chineseRegex.test(name)) {
@@ -331,23 +365,30 @@
                 return;
             }
 
-            document.getElementById('loginBtn').innerHTML = '🔄 核對中...'; 
-            document.getElementById('loginBtn').disabled = true;
+            btn.innerHTML = '🔄 系統登入與資料同步中...'; 
+            btn.disabled = true;
             
-            fetch(`${GOOGLE_SCRIPT_URL}?action=checkStaff&name=${encodeURIComponent(name)}&dob=${dob}`)
-            .then(res => res.json()).then(authRes => {
+            Promise.all([
+                fetch(`${GOOGLE_SCRIPT_URL}?action=checkStaff&name=${encodeURIComponent(name)}&dob=${dob}`).then(res => res.json()),
+                fetch(GOOGLE_SCRIPT_URL).then(res => res.json())
+            ])
+            .then(([authRes, data]) => {
                 if (authRes.status !== "success") {
                     alert('❌ 登入失敗：查無此員工姓名或生日錯誤！');
-                    document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; document.getElementById('loginBtn').disabled = false; return;
+                    btn.innerHTML = '進入巡檢系統'; btn.disabled = false;
+                    return;
                 }
-                fetch(GOOGLE_SCRIPT_URL).then(res => res.json()).then(data => {
-                    questionData = data; currentUser = name;
-                    document.getElementById('loginSection').classList.add('hidden'); document.getElementById('formSection').classList.remove('hidden');
-                    document.getElementById('displayInspector').textContent = name;
-                    setTodayDate(); getLocation(); resizeCanvas();
-                    document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; document.getElementById('loginBtn').disabled = false;
-                });
-            }).catch(err => { alert('連線失敗。'); document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; document.getElementById('loginBtn').disabled = false; });
+                questionData = data; 
+                currentUser = name;
+                switchView('form');
+                document.getElementById('displayInspector').textContent = name;
+                setTodayDate(); getLocation(); resizeCanvas();
+                btn.innerHTML = '進入巡檢系統'; btn.disabled = false;
+            })
+            .catch(err => { 
+                alert('連線失敗，請檢查網路。'); 
+                btn.innerHTML = '進入巡檢系統'; btn.disabled = false; 
+            });
         }
 
         function renderChecklist() {
@@ -371,8 +412,9 @@
                         
                         <div id="${qId}_exception" class="hidden-smooth flex-col mt-4 p-4 bg-red-50 border border-red-100 rounded-xl space-y-4">
                             <input type="text" id="${qId}Note" placeholder="✍️ 異常狀況說明 *" class="w-full px-4 py-3 text-base rounded-lg border border-red-200 outline-none focus:border-red-400">
-                            <input type="file" accept="image/*" onchange="handleExceptionPhoto('${qId}', this)" class="w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-white file:text-red-700 file:border file:border-red-200 hover:file:bg-red-100 shadow-sm cursor-pointer">
-                            <div id="${qId}_photoPreview" class="mt-2 hidden-smooth"></div>
+                            <!-- 🚀 升級異常照片支援多選與單獨刪除 -->
+                            <input type="file" accept="image/*" multiple onchange="handleExceptionPhoto('${qId}', this)" class="w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-white file:text-red-700 file:border file:border-red-200 hover:file:bg-red-100 shadow-sm cursor-pointer">
+                            <div id="${qId}_photoPreview" class="flex flex-wrap gap-3 mt-2"></div>
                         </div>
                     </div>
                 `);
@@ -383,18 +425,42 @@
         function toggleException(qId, isAbnormal) {
             const el = document.getElementById(`${qId}_exception`); const noteInput = document.getElementById(`${qId}Note`);
             if (isAbnormal) { el.classList.add('show-smooth'); noteInput.setAttribute('required', 'true'); } 
-            else { el.classList.remove('show-smooth'); noteInput.removeAttribute('required'); noteInput.value = ''; uploadedPhotos[qId] = ''; document.getElementById(`${qId}_photoPreview`).classList.remove('show-block'); }
+            else { 
+                el.classList.remove('show-smooth'); noteInput.removeAttribute('required'); noteInput.value = ''; 
+                uploadedPhotos[qId] = []; document.getElementById(`${qId}_photoPreview`).innerHTML = '';
+            }
         }
 
+        // 🚀 異常照片模組升級：支援多張並可單獨刪除
         function handleExceptionPhoto(qId, input) {
-            const previewContainer = document.getElementById(`${qId}_photoPreview`);
-            if (input.files[0]) {
-                compressImage(input.files[0], function(base64) { 
-                    uploadedPhotos[qId] = base64; 
-                    previewContainer.innerHTML = `<img src="${base64}" class="h-28 w-28 object-cover rounded-lg border border-red-200 shadow-sm">`;
-                    previewContainer.classList.remove('hidden-smooth'); previewContainer.classList.add('show-block');
+            if (!uploadedPhotos[qId]) uploadedPhotos[qId] = [];
+            Array.from(input.files).forEach(file => {
+                compressImage(file, function(base64) {
+                    uploadedPhotos[qId].push(base64);
+                    renderExceptionPhotos(qId);
                 });
-            } else { uploadedPhotos[qId] = ''; previewContainer.innerHTML = ''; previewContainer.classList.remove('show-block'); previewContainer.classList.add('hidden-smooth'); }
+            });
+            input.value = ''; 
+        }
+
+        function renderExceptionPhotos(qId) {
+            const container = document.getElementById(`${qId}_photoPreview`);
+            container.innerHTML = '';
+            if (uploadedPhotos[qId] && uploadedPhotos[qId].length > 0) {
+                uploadedPhotos[qId].forEach((base64, index) => {
+                    container.insertAdjacentHTML('beforeend', `
+                        <div class="relative inline-block mt-2">
+                            <img src="${base64}" class="h-20 w-20 object-cover rounded-lg border border-red-200 shadow-sm">
+                            <button type="button" onclick="removeExceptionPhoto('${qId}', ${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-md active:scale-95 focus:outline-none">×</button>
+                        </div>
+                    `);
+                });
+            }
+        }
+
+        function removeExceptionPhoto(qId, index) {
+            uploadedPhotos[qId].splice(index, 1);
+            renderExceptionPhotos(qId);
         }
 
         function checkCompletion() {
@@ -457,18 +523,14 @@
         function openAdminPanel() {
             const pwd = prompt("請輸入管理員密碼：");
             if (pwd === "1234") { 
-                document.getElementById('loginSection').classList.add('hidden'); 
-                document.getElementById('formSection').classList.add('hidden'); 
-                document.getElementById('adminSection').classList.remove('hidden'); 
+                switchView('admin');
                 setTodayDate(); 
                 fetchRecordedDatesAndRender(); 
             } else if (pwd !== null) alert("密碼錯誤！");
         }
         
         function closeAdminPanel() { 
-            document.getElementById('adminSection').classList.add('hidden'); 
-            if(currentUser) { document.getElementById('formSection').classList.remove('hidden'); } 
-            else { document.getElementById('loginSection').classList.remove('hidden'); }
+            switchView(currentUser ? 'form' : 'login');
         }
 
         function fetchRecordedDatesAndRender() {
@@ -612,7 +674,7 @@
                                 const blobQr = await resQr.blob();
                                 qrCodeImg = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blobQr); });
                             }
-                        } catch(e) {}
+                        } catch(e) { console.warn("QR Error", e); }
                     }
 
                     let webMapHtml = '';
@@ -641,9 +703,6 @@
                                     ${webBasicInfo}${webMapHtml}
                                     <h4 class="font-extrabold text-gray-800 text-lg border-b pb-1 mt-6 mb-4 flex items-center gap-2">📋 安全檢核項目</h4>`;
 
-                    // ==========================================
-                    // 🚀 PDF 排版組裝
-                    // ==========================================
                     let currentPdfHtml = `<div style="width: 800px; padding: 20px 40px; box-sizing: border-box; background: white; margin: 0 auto;">`;
                     
                     const pdfBasicInfo = `
@@ -677,11 +736,17 @@
                         let note = notes[q.id] || getVal(row, `Q${qNum}說明`);
                         let pic = getVal(row, `Q${qNum}照片`);
 
+                        let picUrls = pic ? pic.split('\n').filter(u => u.startsWith('http')) : [];
+
                         let webQBlock = `<div class="bg-blue-50/30 p-4 rounded-xl border border-gray-200 text-base mb-4 avoid-break">
                                         <p class="font-extrabold text-gray-900 text-lg mb-1"><span class="text-blue-600">[${q.category}]</span> ${q.item}</p>
                                         <p class="text-gray-500 mb-3 text-sm border-l-2 border-blue-400 pl-2">${q.standard}</p>
                                         <p class="text-base font-bold bg-white inline-block px-3 py-1 rounded border border-gray-200">檢查結果：<span class="${result==='異常'?'text-red-600':(result==='正常'?'text-green-600':'text-gray-500')}">${result}</span> ${note?` <span class="text-gray-600 text-sm font-normal ml-2">(說明：${note})</span>`:''}</p>`;
-                        if (pic && pic.startsWith('http')) webQBlock += `<div class="mt-3"><p class="text-red-600 font-bold mb-2 text-sm">🚨 異常照片：</p><img src="${pic}" class="h-40 object-contain rounded-lg border border-gray-300 shadow-sm" crossorigin="anonymous"></div>`;
+                        if (picUrls.length > 0) {
+                            webQBlock += `<div class="mt-3"><p class="text-red-600 font-bold mb-2 text-sm">🚨 異常照片：</p><div class="flex flex-wrap gap-2">`;
+                            picUrls.forEach(u => { webQBlock += `<img src="${u}" class="h-40 object-contain rounded-lg border border-gray-300 shadow-sm" crossorigin="anonymous">`; });
+                            webQBlock += `</div></div>`;
+                        }
                         webQBlock += `</div>`;
                         webHtml += webQBlock; 
 
@@ -689,7 +754,11 @@
                                         <p class="font-bold text-gray-800 text-sm mb-1">[${q.category}] ${q.item}</p>
                                         <p class="text-xs text-gray-400 mb-2 leading-relaxed">${q.standard}</p>
                                         <p class="text-sm font-bold text-gray-800">檢查結果：<span class="${result==='異常'?'text-red-600':(result==='正常'?'text-green-600':'text-gray-500')}">${result}</span> ${note?`<span class="text-gray-500 font-normal ml-2">(說明：${note})</span>`:''}</p>`;
-                        if (pic && pic.startsWith('http')) pdfQBlock += `<div class="mt-2 pt-2 border-t border-gray-100"><img src="${pic}" class="h-24 object-contain rounded border border-gray-200" crossorigin="anonymous"></div>`;
+                        if (picUrls.length > 0) {
+                            pdfQBlock += `<div class="mt-2 pt-2 border-t border-gray-100"><div class="flex flex-wrap gap-2">`;
+                            picUrls.forEach(u => { pdfQBlock += `<img src="${u}" class="h-20 object-contain rounded border border-gray-200" crossorigin="anonymous">`; });
+                            pdfQBlock += `</div></div>`;
+                        }
                         pdfQBlock += `</div>`;
                         
                         currentPdfHtml += pdfQBlock;
@@ -770,7 +839,7 @@
                     pagebreak: { mode: ['css', 'legacy'] } 
                 };
                 
-                // 🚀 執行純檔案分享，避免 iOS 產生 .txt
+                // 🚀 純檔案分享，解決 iOS 自動產生 .txt 檔的問題
                 html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
                     pdfContainer.style.position = 'absolute'; pdfContainer.style.left = '-10000px'; pdfContainer.style.visibility = 'hidden';
                     mainBody.className = originalClasses; adminSection.style.display = 'block'; adminBtn.style.display = 'block';
@@ -780,7 +849,6 @@
                     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        // 【關鍵修改】：只傳遞 files，移除 text 與 title，解決 iOS 自動產生 .txt 檔的問題
                         navigator.share({
                             files: [file]
                         }).catch(err => console.log('分享取消或失敗:', err));
