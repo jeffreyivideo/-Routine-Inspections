@@ -136,6 +136,7 @@
                 </div>
             </div>
 
+            <!-- 自動氣象與熱危害資訊區塊 -->
             <div id="weatherBlock" class="hidden-smooth flex-col mt-2 bg-blue-50 border border-blue-200 rounded-2xl p-4 shadow-sm">
                 <div class="flex items-center gap-2 mb-3">
                     <h4 class="font-extrabold text-blue-800 text-lg">🌤️ 現場氣象與熱危害資訊</h4>
@@ -344,7 +345,7 @@
             }
         }
 
-        // 🚀 修復：改為安全穩定的分段順序連線，徹底解決 Google Apps Script 阻擋平行請求的問題
+        // 🚀 一鍵雙效：驗證身分並同時下載題庫 (速度提升2倍！)
         function handleLogin() {
             const name = document.getElementById('empName').value.trim(); 
             const dob = document.getElementById('empDob').value.trim();
@@ -360,7 +361,7 @@
                 return;
             }
 
-            btn.innerHTML = '🔄 1/2 驗證身分中...'; 
+            btn.innerHTML = '🔄 安全登入與資料下載中...'; 
             btn.disabled = true;
             
             fetch(`${GOOGLE_SCRIPT_URL}?action=checkStaff&name=${encodeURIComponent(name)}&dob=${dob}`)
@@ -369,25 +370,37 @@
                 if (authRes.status !== "success") {
                     alert('❌ 登入失敗：查無此員工姓名或生日錯誤！');
                     btn.innerHTML = '進入巡檢系統'; btn.disabled = false;
-                    throw new Error("Unauthorized");
+                    return;
                 }
-                btn.innerHTML = '🔄 2/2 下載資料中...';
-                return fetch(GOOGLE_SCRIPT_URL).then(res => res.json());
-            })
-            .then(data => {
-                questionData = data; 
-                currentUser = name;
-                switchView('form');
-                document.getElementById('displayInspector').textContent = name;
-                setTodayDate(); getLocation(); resizeCanvas();
-                btn.innerHTML = '進入巡檢系統'; btn.disabled = false;
+                
+                // 使用後端一併回傳的題庫資料，達成一鍵登入
+                if (authRes.questions && authRes.questions.length > 0) {
+                    questionData = authRes.questions;
+                    finishLogin(name);
+                } else {
+                    // 相容舊版 GAS 程式碼：若無回傳 questions，則發起第二次請求
+                    fetch(GOOGLE_SCRIPT_URL).then(res => res.json()).then(data => {
+                        questionData = data;
+                        finishLogin(name);
+                    }).catch(err => {
+                        alert('題庫下載失敗，請檢查網路。');
+                        btn.innerHTML = '進入巡檢系統'; btn.disabled = false;
+                    });
+                }
             })
             .catch(err => { 
-                if (err.message !== "Unauthorized") {
-                    alert('系統連線不穩，請檢查網路或稍後再試。'); 
-                    btn.innerHTML = '進入巡檢系統'; btn.disabled = false; 
-                }
+                alert('系統連線不穩，請檢查網路或稍後再試。'); 
+                btn.innerHTML = '進入巡檢系統'; btn.disabled = false; 
             });
+        }
+
+        function finishLogin(name) {
+            currentUser = name;
+            switchView('form');
+            document.getElementById('displayInspector').textContent = name;
+            setTodayDate(); getLocation(); resizeCanvas();
+            document.getElementById('loginBtn').innerHTML = '進入巡檢系統'; 
+            document.getElementById('loginBtn').disabled = false;
         }
 
         function renderChecklist() {
@@ -521,14 +534,14 @@
         }
 
         const PDF_HEADER_TEMPLATE = `
-            <div class="flex items-center justify-center gap-3 pb-3 border-b border-gray-200 mb-4">
+            <div class="flex items-center justify-center gap-3 pb-3 border-b border-gray-200 mb-4 avoid-break">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-8 object-contain" crossorigin="anonymous">
                 <h3 class="font-bold text-2xl text-gray-800 tracking-wider">現場職安巡檢日報表</h3>
             </div>
         `;
         
         const PDF_HEADER_CONTINUED = `
-            <div class="flex items-center justify-center gap-3 pb-3 border-b border-gray-200 mb-4">
+            <div class="flex items-center justify-center gap-3 pb-3 border-b border-gray-200 mb-4 avoid-break">
                 <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-8 object-contain" crossorigin="anonymous">
                 <h3 class="font-bold text-2xl text-gray-800 tracking-wider">現場職安巡檢日報表</h3>
             </div>
