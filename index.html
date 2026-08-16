@@ -22,8 +22,10 @@
         .show-block { display: block; opacity: 1; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🚀 移除隱藏屬性，改由 Loading 遮罩覆蓋，強迫 iOS Safari 進行繪製 */
-        #pdfExportContainer { display: none; background: white; text-align: left; width: 800px; margin: 0 auto; }
+        /* 🚀 隱形保險箱技術：將畫布藏在長寬為0的保險箱內，Safari不會白屏，且畫布也不會干擾畫面 */
+        .pdf-vault { width: 0; height: 0; overflow: hidden; position: fixed; top: 0; left: 0; z-index: -9999; }
+        #pdfExportContainer { width: 800px; background: white; text-align: left; }
+        
         .html2pdf__page-break { page-break-before: always !important; margin: 0 !important; border: 0 !important; padding: 0 !important; }
         .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; display: block; }
         
@@ -34,15 +36,17 @@
 </head>
 <body id="mainBody" class="app-bg min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-4 transition-all">
 
-    <!-- 🚀 全螢幕載入遮罩：蓋住 PDF 繪製過程，防止畫面閃爍與破版 -->
+    <!-- 全螢幕載入遮罩 -->
     <div id="loadingOverlay" class="fixed inset-0 bg-white/95 backdrop-blur-sm z-[99999] hidden flex-col items-center justify-center">
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
         <h2 class="text-2xl font-extrabold text-gray-800 tracking-wider">📄 報表精密繪製中</h2>
-        <p class="text-gray-500 mt-2 font-bold">請勿關閉網頁或切換應用程式...</p>
+        <p class="text-gray-500 mt-2 font-bold">請稍候，即將為您產出...</p>
     </div>
 
-    <!-- 實體的 PDF 渲染容器 -->
-    <div id="pdfExportContainer"></div>
+    <!-- 🚀 實體的 PDF 渲染容器 (安全藏在隱形保險箱裡) -->
+    <div class="pdf-vault">
+        <div id="pdfExportContainer"></div>
+    </div>
 
     <button id="adminBtn" onclick="openAdminPanel()" class="absolute top-4 left-4 bg-slate-700 text-white px-4 py-2 rounded-xl text-sm shadow opacity-80 hover:opacity-100 transition z-50">
         ⚙️ 後台管理
@@ -105,6 +109,7 @@
             請選擇日期並點擊查詢。
         </div>
         
+        <!-- 下載按鈕 -->
         <button id="downloadPdfBtn" onclick="downloadAdminReport()" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl hidden shadow-lg transition text-lg active:scale-95">
             📤 匯出並分享 PDF 報表
         </button>
@@ -231,6 +236,10 @@
         let currentUser = ''; let uploadedPhotos = {}; let questionData = []; let generalPhotosList = []; 
         let currentWeatherData = null; let recordedDatesList = [];
         let calYear = new Date().getFullYear(); let calMonth = new Date().getMonth(); 
+
+        // 🚀 PDF 分享狀態變數
+        let currentPdfBlob = null;
+        let currentPdfFileName = '';
 
         function switchView(view) {
             document.getElementById('loginSection').style.display = 'none';
@@ -426,7 +435,7 @@
 
         function submitForm(e) {
             e.preventDefault();
-            if (strokeCount < 6 || (maxX - minX) < 150 || signatureDistance < 900) { alert('⚠️ 請簽署完整中文全名!'); return; }
+            if (strokeCount < 6 || (maxX - minX) < 150 || signatureDistance < 900) { alert('⚠️ 筆劃不足！請簽署完整中文全名。'); return; }
             const submitBtn = document.getElementById('submitBtn'); submitBtn.innerHTML = '🔄 上傳中...'; submitBtn.disabled = true;
 
             let answersObj = {}, notesObj = {};
@@ -498,9 +507,16 @@
             }
         }
 
+        // 🚀 在抓取新資料時，務必把之前的分享狀態清空
         function fetchReports() {
             const date = document.getElementById('reportDate').value; if (!date) return;
             const reportContent = document.getElementById('reportContent'); reportContent.innerHTML = '🔄 資料同步與報表生成中，請稍候...';
+            
+            currentPdfBlob = null;
+            let dlBtn = document.getElementById('downloadPdfBtn');
+            dlBtn.innerHTML = '📤 匯出並分享 PDF 報表';
+            dlBtn.className = "w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl hidden shadow-lg transition text-lg active:scale-95";
+
             const timestamp = new Date().getTime();
             let loadQ = questionData.length === 0 ? fetchWithRetry(`${GOOGLE_SCRIPT_URL}?t=${timestamp}`).then(text => { questionData = JSON.parse(text); }) : Promise.resolve();
 
@@ -557,7 +573,7 @@
                     webHtml += `<div class="mb-8 border border-gray-300 rounded-xl shadow-sm bg-white p-4 sm:p-6"><div class="flex items-center justify-center gap-4 pb-4 border-b border-gray-200 mb-6"><img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-8 object-contain" crossorigin="anonymous"><h3 class="font-bold text-2xl text-gray-800 tracking-wider">現場職安巡檢日報表</h3></div>${webBasicInfo}${webMapHtml}<h4 class="font-extrabold text-gray-800 text-lg border-b pb-1 mt-6 mb-4 flex items-center gap-2">📋 安全檢核項目</h4>`;
 
                     // ==========================================
-                    // 🚀 PDF 完美圖三排版邏輯 (原生流動 + 6題換頁)
+                    // 🚀 PDF 完美圖三排版邏輯
                     // ==========================================
                     const pdfBasicInfo = `
                         <div class="mb-4">
@@ -580,7 +596,6 @@
                             ${qrCodeImg ? `<img src="${qrCodeImg}" class="w-16 h-16 object-contain mix-blend-multiply" />` : ''}
                         </div>`;
 
-                    // 確保寬度為 800px 讓排版固定，不使用 absolute 隱藏，這才是 iOS 抓得到的關鍵！
                     let currentPdfHtml = `<div style="width: 800px; padding: 20px 40px; box-sizing: border-box; background: white; margin: 0 auto;">` + PDF_HEADER_TEMPLATE + pdfBasicInfo + pdfMapBlock + `<h4 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">📋 安全檢核項目明細：</h4>`;
                     
                     let itemCount = 0;
@@ -592,13 +607,11 @@
                         let pic = getVal(row, `Q${qNum}照片`);
                         let picUrls = pic ? pic.split('\n').filter(u => u.startsWith('http')) : [];
 
-                        // 網頁版 HTML...
                         let webQBlock = `<div class="bg-blue-50/30 p-4 rounded-xl border border-gray-200 text-base mb-4"><p class="font-extrabold text-gray-900 text-lg mb-1"><span class="text-blue-600">[${q.category}]</span> ${q.item}</p><p class="text-gray-500 mb-3 text-sm border-l-2 border-blue-400 pl-2">${q.standard}</p><p class="text-base font-bold bg-white inline-block px-3 py-1 rounded border border-gray-200">檢查結果：<span class="${result==='異常'?'text-red-600':(result==='正常'?'text-green-600':'text-gray-500')}">${result}</span> ${note?` <span class="text-gray-600 text-sm font-normal ml-2">(說明：${note})</span>`:''}</p>`;
                         if (picUrls.length > 0) { webQBlock += `<div class="mt-3"><p class="text-red-600 font-bold mb-2 text-sm">🚨 異常照片：</p><div class="flex flex-wrap gap-2">`; picUrls.forEach(u => { webQBlock += `<img src="${u}" class="h-40 object-contain rounded-lg border border-gray-300 shadow-sm" crossorigin="anonymous">`; }); webQBlock += `</div></div>`; }
                         webQBlock += `</div>`;
                         webHtml += webQBlock; 
 
-                        // PDF版 (完美大字體)
                         let pdfQBlock = `<div class="bg-white p-3.5 rounded-lg border border-gray-100 mb-3 avoid-break">
                                         <p class="font-bold text-gray-800 text-base mb-1">[${q.category}] ${q.item}</p>
                                         <p class="text-[13px] text-gray-500 mb-2 leading-relaxed">${q.standard}</p>
@@ -613,15 +626,13 @@
                         currentPdfHtml += pdfQBlock;
                         itemCount++;
 
-                        // 🚀 第 6 題結束，精準插入 html2pdf 原生換頁標籤
                         if (itemCount === 6 && index < filteredQ.length - 1) {
                             currentPdfHtml += `<div class="html2pdf__page-break"></div>`;
                             currentPdfHtml += PDF_HEADER_CONTINUED;
-                            itemCount = 0; // 重置計數
+                            itemCount = 0; 
                         }
                     });
 
-                    // 處理 Footer (網頁版)
                     let overallPics = getVal(row, '現場整體照片'); let sigPic = getVal(row, '簽名檔') || getVal(row, '簽名') || getVal(row, '巡檢員簽名') || getVal(row, '巡檢人員簽名確認');
                     
                     let webFooterBlock = `<div class="mt-8"><p class="font-extrabold text-gray-800 text-lg mb-3">📸 現場整體照片:</p>`;
@@ -630,7 +641,6 @@
                     if (sigPic && sigPic.startsWith('http')) { webFooterBlock += `<img src="${sigPic}" class="h-20 sm:h-24 object-contain" crossorigin="anonymous">`; } else if (sigPic) { webFooterBlock += `<p class="text-sm font-bold text-red-500">${sigPic}</p>`; } else { webFooterBlock += `<p class="text-sm font-bold text-gray-400">未簽名</p>`; }
                     webFooterBlock += `</div>`; webHtml += webFooterBlock + `</div>`; 
 
-                    // 🚀 PDF Footer (使用 avoid-break 緊緻綁定防切斷)
                     let pdfFooterBlock = `<div class="avoid-break mt-6 border-t-2 border-gray-200 pt-5">`;
                     pdfFooterBlock += `<p class="font-bold text-gray-800 text-base mb-3 flex items-center gap-2">📸 現場整體照片:</p>`;
                     if (overallPics) {
@@ -649,7 +659,7 @@
                     } else {
                         pdfFooterBlock += `<p class="text-xs font-bold text-gray-400">未簽名</p>`;
                     }
-                    pdfFooterBlock += `</div></div></div>`; // 封裝整份 HTML
+                    pdfFooterBlock += `</div></div></div>`;
 
                     currentPdfHtml += pdfFooterBlock;
                     
@@ -661,7 +671,6 @@
                 }
 
                 document.getElementById('reportContent').innerHTML = webHtml;
-                // 將 HTML 置入準備列印的容器中
                 document.getElementById('pdfExportContainer').innerHTML = pdfHtmlStr;
                 document.getElementById('downloadPdfBtn').classList.remove('hidden');
             }).catch(err => { 
@@ -670,75 +679,77 @@
             });
         }
 
+        // 🚀 關鍵修改：兩階段安全分享，完全杜絕 Safari 白畫面！
         function downloadAdminReport() {
+            const btn = document.getElementById('downloadPdfBtn');
+            
+            // 【第二階段】：如果 PDF 已經產好，直接彈出分享，秒開絕不卡！
+            if (currentPdfBlob) {
+                triggerShareOrDownload();
+                return;
+            }
+
+            // 【第一階段】：開始畫 PDF
             const date = document.getElementById('reportDate').value;
             const pdfContainer = document.getElementById('pdfExportContainer');
-            const mainBody = document.getElementById('mainBody');
             const loadingOverlay = document.getElementById('loadingOverlay');
             
-            // 🚀 1. 顯示全螢幕 Loading 遮罩
             loadingOverlay.classList.remove('hidden');
             loadingOverlay.classList.add('flex');
 
-            // 2. 暫時隱藏所有背景操作介面，防止干擾 html2canvas
-            document.getElementById('adminSection').style.display = 'none';
-            document.getElementById('adminBtn').style.display = 'none';
-            
-            // 將 Body 的 Tailwind 背景清除，變為純白
-            const originalClasses = mainBody.className;
-            mainBody.className = "bg-white m-0 p-0";
-
-            // 🚀 3. 關鍵破解法：把 PDF 畫布變成「網頁真正可見的一部分」！
-            pdfContainer.style.display = 'block';
-            
-            // 🚀 4. 強制捲動到最上方 (解決 iOS html2canvas 截圖偏位留白問題)
-            window.scrollTo(0, 0);
-
-            // 給予 Safari 充足的時間 (800ms) 將畫面真正渲染出來
             setTimeout(() => {
                 const opt = {
-                    margin: [10, 0, 10, 0], // 交由 jsPDF 原生控制上下留白
+                    margin: [10, 0, 10, 0], 
                     filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
                     image: { type: 'jpeg', quality: 0.98 }, 
-                    html2canvas: { 
-                        scale: 2, 
-                        useCORS: true, 
-                        logging: false, 
-                        windowWidth: 800,
-                        scrollY: 0 // 強制從座標 0 開始抓取
-                    }, 
+                    html2canvas: { scale: 2, useCORS: true, logging: false }, 
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: 'css' } // 嚴格遵守我們設置的 html2pdf__page-break
+                    pagebreak: { mode: 'css' }
                 };
                 
                 html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
-                    // 🚀 5. 轉換完成，恢復原本的 UI 介面
-                    pdfContainer.style.display = 'none';
-                    mainBody.className = originalClasses;
-                    document.getElementById('adminSection').style.display = 'block';
-                    document.getElementById('adminBtn').style.display = 'block';
+                    // 把產好的 PDF 存在變數裡
+                    currentPdfBlob = pdfBlob;
+                    currentPdfFileName = `信實集團_職安巡檢日報表_${date}.pdf`;
+                    
+                    // 關閉 Loading 遮罩
                     loadingOverlay.classList.add('hidden');
                     loadingOverlay.classList.remove('flex');
-
-                    const fileName = `信實集團_職安巡檢日報表_${date}.pdf`;
-                    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        navigator.share({ files: [file] }).catch(err => console.log('分享取消或失敗:', err));
-                    } else {
-                        const url = URL.createObjectURL(pdfBlob); const a = document.createElement('a');
-                        a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-                    }
+                    
+                    // 變更按鈕外觀，提示使用者可以分享了
+                    btn.innerHTML = '✅ 報表已就緒！點擊這裡 分享 / 下載';
+                    btn.className = "w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg active:scale-95 animate-pulse";
+                    
+                    // 自動嘗試彈出一次分享
+                    triggerShareOrDownload();
+                    
                 }).catch(err => {
-                    pdfContainer.style.display = 'none';
-                    mainBody.className = originalClasses;
-                    document.getElementById('adminSection').style.display = 'block';
-                    document.getElementById('adminBtn').style.display = 'block';
                     loadingOverlay.classList.add('hidden');
                     loadingOverlay.classList.remove('flex');
                     alert("產出過程發生錯誤，請稍後重試。");
                 });
-            }, 800); 
+            }, 300); 
+        }
+
+        // 🚀 原生安全分享指令
+        function triggerShareOrDownload() {
+            const file = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' });
+            
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({ files: [file] }).catch(err => console.log('分享取消或失敗:', err));
+            } else {
+                // 如果是電腦版不支援原生分享，使用 Base64 下載，100% 防止當前頁面變白！
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const a = document.createElement('a');
+                    a.href = e.target.result;
+                    a.download = currentPdfFileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
+                reader.readAsDataURL(currentPdfBlob);
+            }
         }
     </script>
 </body>
