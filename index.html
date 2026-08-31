@@ -22,8 +22,8 @@
         .show-block { display: block; opacity: 1; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🚀 終極 A4 積木設定：強制絕對畫布尺寸，消滅 iOS 自動推擠的 Margin Bug */
-        #pdfExportContainer { position: absolute; left: -10000px; top: 0; width: 800px; visibility: hidden; background: white; text-align: left; z-index: -1; }
+        /* 🚀 終極防護：平時隱藏，匯出時強制顯示於頂層以防 iOS Safari 產生全白畫布 */
+        #pdfExportContainer { display: none; position: absolute; top: 0; left: 0; width: 800px; z-index: 10; background: white; text-align: left; }
         .html2pdf__page-break { page-break-before: always !important; margin: 0 !important; border: 0 !important; padding: 0 !important; }
         
         input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: #2563eb; }
@@ -32,6 +32,12 @@
     </style>
 </head>
 <body id="mainBody" class="app-bg min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-4">
+    <!-- 🚀 全螢幕載入遮罩：蓋住 PDF 繪製過程，防止畫面閃爍與破版 -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-white/95 backdrop-blur-sm z-[99999] hidden flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+        <h2 class="text-2xl font-extrabold text-gray-800 tracking-wider">📄 報表精密繪製中</h2>
+        <p class="text-gray-500 mt-2 font-bold">請稍候，即將為您產出...</p>
+    </div>
 
     <!-- 實體的 PDF 渲染容器 -->
     <div id="pdfExportContainer"></div>
@@ -950,71 +956,91 @@
         }
 
         function downloadAdminReport() {
-            const btn = document.getElementById('downloadPdfBtn');
-            const adminSection = document.getElementById('adminSection');
-            const adminBtn = document.getElementById('adminBtn');
-            const pdfContainer = document.getElementById('pdfExportContainer');
-            const mainBody = document.getElementById('mainBody');
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            
-            loadingOverlay.classList.remove('hidden');
-            loadingOverlay.classList.add('flex');
-
-            adminSection.style.display = 'none';
-            adminBtn.style.display = 'none';
-            
-            const originalClasses = mainBody.className;
-            mainBody.className = "bg-white m-0 p-0";
-
-            pdfContainer.style.display = 'block';
-            
-            window.scrollTo(0, 0);
-
-            setTimeout(() => {
-                const date = document.getElementById('reportDate').value;
-                const opt = {
-                    margin: [10, 0, 10, 0], 
-                    filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
-                    image: { type: 'jpeg', quality: 0.98 }, 
-                    html2canvas: { 
-                        scale: 2, 
-                        useCORS: true, 
-                        logging: false, 
-                        windowWidth: 800,
-                        scrollY: 0 
-                    }, 
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: 'css' } 
-                };
-                
-                html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
-                    pdfContainer.style.display = 'none';
-                    mainBody.className = originalClasses;
-                    document.getElementById('adminSection').style.display = 'block';
-                    document.getElementById('adminBtn').style.display = 'block';
-                    loadingOverlay.classList.add('hidden');
-                    loadingOverlay.classList.remove('flex');
-
-                    const fileName = `信實集團_職安巡檢日報表_${date}.pdf`;
-                    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        navigator.share({ files: [file] }).catch(err => console.log('分享取消或失敗:', err));
-                    } else {
-                        const url = URL.createObjectURL(pdfBlob); const a = document.createElement('a');
-                        a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-                    }
-                }).catch(err => {
-                    pdfContainer.style.display = 'none';
-                    mainBody.className = originalClasses;
-                    document.getElementById('adminSection').style.display = 'block';
-                    document.getElementById('adminBtn').style.display = 'block';
-                    loadingOverlay.classList.add('hidden');
-                    loadingOverlay.classList.remove('flex');
-                    alert("產出過程發生錯誤，請稍後重試。");
-                });
-            }, 800); 
+    try {
+        // 🚀 1. 除錯防呆機制：檢查 PDF 引擎是否因網路不穩未載入
+        if (typeof html2pdf === 'undefined') {
+            alert("⚠️ PDF 轉換引擎尚未載入，請確認網路連線或重新整理網頁！");
+            return;
         }
+
+        const date = document.getElementById('reportDate').value;
+        const btn = document.getElementById('downloadPdfBtn');
+        const adminSection = document.getElementById('adminSection');
+        const adminBtn = document.getElementById('adminBtn');
+        const pdfContainer = document.getElementById('pdfExportContainer');
+        const mainBody = document.getElementById('mainBody');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        
+        // 🚀 2. 動態安全遮罩：顯示全螢幕 Loading，蓋住背後的實體轉換過程
+        loadingOverlay.classList.remove('hidden');
+        loadingOverlay.classList.add('flex');
+
+        // 隱藏背景操作介面，防止干擾
+        adminSection.style.display = 'none';
+        adminBtn.style.display = 'none';
+        
+        // 將 Body 背景清空，變為純白
+        const originalClasses = mainBody.className;
+        mainBody.className = "bg-white m-0 p-0";
+
+        // 🚀 3. 破解 iOS 白畫面：將 PDF 畫布變成「網頁真正可見的一部分」(此時被 Loading 擋住所以使用者看不到)
+        pdfContainer.style.display = 'block';
+        
+        // 強制捲動到最上方，避免 Safari 截圖座標偏移產生留白
+        window.scrollTo(0, 0);
+
+        // 給予瀏覽器充足的時間 (800ms) 將畫面真正渲染出來
+        setTimeout(() => {
+            const opt = {
+                margin: 0, 
+                filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
+                image: { type: 'jpeg', quality: 0.98 }, 
+                html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800 }, 
+                jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' },
+                pagebreak: { mode: 'css' }
+            };
+            
+            html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
+                // 🚀 轉換成功，還原網頁初始狀態
+                pdfContainer.style.display = 'none';
+                mainBody.className = originalClasses;
+                adminSection.style.display = 'block';
+                adminBtn.style.display = 'block';
+                
+                // 關閉 Loading 遮罩
+                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('flex');
+                
+                btn.innerHTML = '✅ 報表已產出！點擊再次下載';
+
+                const fileName = `信實集團_職安巡檢日報表_${date}.pdf`;
+                const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                // 呼叫原生分享 / 下載
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({ files: [file] }).catch(err => console.log('分享取消或失敗:', err));
+                } else {
+                    const url = URL.createObjectURL(pdfBlob); 
+                    const a = document.createElement('a');
+                    a.href = url; a.download = fileName; 
+                    document.body.appendChild(a); a.click(); 
+                    document.body.removeChild(a); URL.revokeObjectURL(url);
+                }
+            }).catch(err => {
+                // 發生例外錯誤的安全還原
+                pdfContainer.style.display = 'none';
+                mainBody.className = originalClasses;
+                adminSection.style.display = 'block';
+                adminBtn.style.display = 'block';
+                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('flex');
+                alert("產出過程發生錯誤，請稍後重試。\n錯誤訊息：" + err.message);
+            });
+        }, 800); 
+    } catch (e) {
+        alert("執行發生例外錯誤：" + e.message);
+    }
+}
     </script>
 </body>
 </html>
