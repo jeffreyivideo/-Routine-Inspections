@@ -957,7 +957,6 @@
 
         function downloadAdminReport() {
     try {
-        // 🚀 1. 除錯防呆機制：檢查 PDF 引擎是否因網路不穩未載入
         if (typeof html2pdf === 'undefined') {
             alert("⚠️ PDF 轉換引擎尚未載入，請確認網路連線或重新整理網頁！");
             return;
@@ -971,25 +970,19 @@
         const mainBody = document.getElementById('mainBody');
         const loadingOverlay = document.getElementById('loadingOverlay');
         
-        // 🚀 2. 動態安全遮罩：顯示全螢幕 Loading，蓋住背後的實體轉換過程
         loadingOverlay.classList.remove('hidden');
         loadingOverlay.classList.add('flex');
 
-        // 隱藏背景操作介面，防止干擾
         adminSection.style.display = 'none';
         adminBtn.style.display = 'none';
         
-        // 將 Body 背景清空，變為純白
         const originalClasses = mainBody.className;
         mainBody.className = "bg-white m-0 p-0";
 
-        // 🚀 3. 破解 iOS 白畫面：將 PDF 畫布變成「網頁真正可見的一部分」(此時被 Loading 擋住所以使用者看不到)
         pdfContainer.style.display = 'block';
         
-        // 強制捲動到最上方，避免 Safari 截圖座標偏移產生留白
         window.scrollTo(0, 0);
 
-        // 給予瀏覽器充足的時間 (800ms) 將畫面真正渲染出來
         setTimeout(() => {
             const opt = {
                 margin: 0, 
@@ -1001,13 +994,11 @@
             };
             
             html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
-                // 🚀 轉換成功，還原網頁初始狀態
                 pdfContainer.style.display = 'none';
                 mainBody.className = originalClasses;
-                adminSection.style.display = 'block';
-                adminBtn.style.display = 'block';
+                document.getElementById('adminSection').style.display = 'block';
+                document.getElementById('adminBtn').style.display = 'block';
                 
-                // 關閉 Loading 遮罩
                 loadingOverlay.classList.add('hidden');
                 loadingOverlay.classList.remove('flex');
                 
@@ -1016,22 +1007,28 @@
                 const fileName = `信實集團_職安巡檢日報表_${date}.pdf`;
                 const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-                // 呼叫原生分享 / 下載
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                // 🚀 核心修正：判斷是否為手機，電腦版直接下載不開分享視窗！
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    // 手機版：開啟原生分享選單
                     navigator.share({ files: [file] }).catch(err => console.log('分享取消或失敗:', err));
                 } else {
+                    // 電腦版 (或不支援分享的裝置)：直接觸發檔案下載
                     const url = URL.createObjectURL(pdfBlob); 
                     const a = document.createElement('a');
-                    a.href = url; a.download = fileName; 
-                    document.body.appendChild(a); a.click(); 
-                    document.body.removeChild(a); URL.revokeObjectURL(url);
+                    a.href = url; 
+                    a.download = fileName; 
+                    document.body.appendChild(a); 
+                    a.click(); 
+                    document.body.removeChild(a); 
+                    URL.revokeObjectURL(url);
                 }
             }).catch(err => {
-                // 發生例外錯誤的安全還原
                 pdfContainer.style.display = 'none';
                 mainBody.className = originalClasses;
-                adminSection.style.display = 'block';
-                adminBtn.style.display = 'block';
+                document.getElementById('adminSection').style.display = 'block';
+                document.getElementById('adminBtn').style.display = 'block';
                 loadingOverlay.classList.add('hidden');
                 loadingOverlay.classList.remove('flex');
                 alert("產出過程發生錯誤，請稍後重試。\n錯誤訊息：" + err.message);
