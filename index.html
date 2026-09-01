@@ -22,7 +22,7 @@
         .show-block { display: block; opacity: 1; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🚀 終極防白屏設定：不使用 absolute 浮空，使用標準 display: none，確保切換時撐開真實網頁高度！ */
+        /* 🚀 PDF 排版容器：預設隱藏，匯出時實體化展開 */
         #pdfExportContainer { display: none; width: 800px; margin: 0 auto; background: white; text-align: left; }
         .html2pdf__page-break { page-break-before: always !important; margin: 0 !important; border: 0 !important; padding: 0 !important; }
         
@@ -33,7 +33,7 @@
 </head>
 <body id="mainBody" class="app-bg min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-4 transition-all">
 
-    <!-- 🚀 全螢幕載入遮罩：改為純白底色，完美蓋住背後的實體渲染過程 -->
+    <!-- 🚀 全白遮罩：用來擋住報表展開時的畫面跳動 -->
     <div id="loadingOverlay" class="fixed inset-0 bg-white z-[99999] hidden flex-col items-center justify-center">
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
         <h2 class="text-2xl font-extrabold text-gray-800 tracking-wider">📄 報表精密繪製中</h2>
@@ -471,21 +471,21 @@
         }
 
         // ==========================================
-        // 🚀 PDF 表頭與接續頁模版 (完美原汁原味樣式)
+        // 🚀 PDF 表頭與接續頁模版
         // ==========================================
         const PDF_HEADER_TEMPLATE = `
-            <div class="flex items-center justify-center gap-3 pb-2 border-b border-gray-200 mb-3">
-                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-6 object-contain" crossorigin="anonymous">
-                <h3 class="font-bold text-xl text-gray-800 tracking-wider">現場職安巡檢日報表</h3>
+            <div style="display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 25px;">
+                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" style="height: 35px; margin-right: 15px;" crossorigin="anonymous">
+                <span style="font-size: 24px; font-weight: bold;">現場職安巡檢日報表</span>
             </div>
         `;
         
         const PDF_HEADER_CONTINUED = `
-            <div class="flex items-center justify-center gap-3 pb-2 border-b border-gray-200 mb-3">
-                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-6 object-contain" crossorigin="anonymous">
-                <h3 class="font-bold text-xl text-gray-800 tracking-wider">現場職安巡檢日報表</h3>
+            <div style="display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 25px;">
+                <img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" style="height: 35px; margin-right: 15px;" crossorigin="anonymous">
+                <span style="font-size: 24px; font-weight: bold;">現場職安巡檢日報表</span>
             </div>
-            <h4 class="font-bold text-gray-800 text-sm mb-3 mt-3 flex items-center gap-2">📋 安全檢核項目明細 (續)：</h4>
+            <h4 style="font-size: 16px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">📋 安全檢核項目明細 (續)：</h4>
         `;
 
         function openAdminPanel() {
@@ -619,7 +619,6 @@
                             ${qrCodeImg ? `<img src="${qrCodeImg}" style="width: 70px; height: 70px; mix-blend-mode: multiply;" crossorigin="anonymous">` : ''}
                         </div>`;
 
-                    // 💡 注意：在此移除 overflow: hidden 避免 html2canvas 裁切渲染 Bug
                     let currentPdfPageHtml = `<div style="width: 800px; height: 1131px; padding: 40px 50px; box-sizing: border-box; background: white; font-family: sans-serif; color: #1f2937; position: relative; margin: 0 auto;">` + PDF_HEADER_TEMPLATE + pdfBasicInfo + pdfMapBlock + `<h4 style="font-size: 16px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">📋 安全檢核項目明細：</h4>`;
                     
                     let itemCount = 0;
@@ -732,7 +731,7 @@
             });
         }
 
-        // 🚀 關鍵防白屏核心：強制置入可視區，用標準區塊撐開高度，徹底避免 html2canvas 抓空
+        // 🚀 關鍵防白屏核心：用實體區塊撐開高度，徹底避免 html2canvas 抓空
         function downloadAdminReport() {
             try {
                 if (typeof html2pdf === 'undefined') {
@@ -763,7 +762,7 @@
                 document.getElementById('loginSection').style.display = 'none';
                 document.getElementById('formSection').style.display = 'none';
 
-                // 3. 將 Body 背景清白，去除所有 padding 與 flex 設定，回歸標準 document flow
+                // 3. 將 Body 背景清白，去除所有 padding，回歸標準 document flow
                 const originalClasses = mainBody.className;
                 mainBody.className = "bg-white m-0 p-0 block";
 
@@ -781,8 +780,7 @@
                         filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
                         image: { type: 'jpeg', quality: 1.0 }, 
                         html2canvas: { scale: 2, useCORS: true, logging: false }, 
-                        jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' },
-                        pagebreak: { mode: 'css', after: '.html2pdf__page-break' }
+                        jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
                     };
                     
                     html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
@@ -814,7 +812,7 @@
                         loadingOverlay.classList.remove('flex');
                         alert("產出過程發生錯誤，請稍後重試。");
                     });
-                }, 1000); // 保留 1 秒讓字體與 DOM 完全佈局完畢
+                }, 1000); // 留 1 秒讓字體與 DOM 完全佈局完畢
             } catch (e) {
                 alert("執行發生例外錯誤：" + e.message);
             }
