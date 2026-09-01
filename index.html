@@ -22,8 +22,8 @@
         .show-block { display: block; opacity: 1; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🚀 終極修復：回歸最純粹的隱藏方式，不使用 absolute 破壞排版 */
-        #pdfExportContainer { display: none; width: 800px; margin: 0 auto; background: white; text-align: left; }
+        /* 🚀 完美圖三樣式：維持原本的隱藏屬性設定 */
+        #pdfExportContainer { position: absolute; left: -10000px; top: 0; width: 800px; visibility: hidden; background: white; text-align: left; z-index: -1; }
         .html2pdf__page-break { page-break-before: always !important; margin: 0 !important; border: 0 !important; padding: 0 !important; }
         
         input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: #2563eb; }
@@ -31,14 +31,7 @@
         select option { font-weight: 700; font-size: 1.1rem; }
     </style>
 </head>
-<body id="mainBody" class="app-bg min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-4 transition-all">
-
-    <!-- 全螢幕載入遮罩 -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-white/95 backdrop-blur-sm z-[99999] hidden flex-col items-center justify-center">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
-        <h2 class="text-2xl font-extrabold text-gray-800 tracking-wider">📄 報表精密繪製中</h2>
-        <p class="text-gray-500 mt-2 font-bold">請稍候，系統正在為您排版...</p>
-    </div>
+<body id="mainBody" class="app-bg min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-4">
 
     <!-- 實體的 PDF 渲染容器 -->
     <div id="pdfExportContainer"></div>
@@ -142,7 +135,6 @@
                 </div>
             </div>
 
-            <!-- 自動氣象與熱危害資訊區塊 -->
             <div id="weatherBlock" class="hidden-smooth flex-col mt-2 bg-blue-50 border border-blue-200 rounded-2xl p-4 shadow-sm">
                 <div class="flex items-center gap-2 mb-3">
                     <h4 class="font-extrabold text-blue-800 text-lg">🌤️ 現場氣象與熱危害資訊</h4>
@@ -960,7 +952,7 @@
             });
         }
 
-        // 🚀 關鍵防白屏核心：強制置入可視區，用 Loading 遮罩完全覆蓋阻擋
+        // 🚀 關鍵防白屏核心：強制置入可視區，用純白 Loading 遮擋使用者視窗
         function downloadAdminReport() {
             try {
                 if (typeof html2pdf === 'undefined') {
@@ -978,83 +970,96 @@
 
                 const date = document.getElementById('reportDate').value;
                 const pdfContainer = document.getElementById('pdfExportContainer');
-                const loadingOverlay = document.getElementById('loadingOverlay');
+                
+                // 動態產生全白強制遮罩，保證 100% 擋住畫面且置於最頂層
+                let overlay = document.getElementById('forceLoadingOverlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'forceLoadingOverlay';
+                    overlay.style.position = 'fixed';
+                    overlay.style.top = '0';
+                    overlay.style.left = '0';
+                    overlay.style.width = '100vw';
+                    overlay.style.height = '100vh';
+                    overlay.style.backgroundColor = '#ffffff';
+                    overlay.style.zIndex = '999999';
+                    overlay.style.display = 'flex';
+                    overlay.style.flexDirection = 'column';
+                    overlay.style.alignItems = 'center';
+                    overlay.style.justifyContent = 'center';
+                    overlay.innerHTML = `
+                        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+                        <h2 class="text-2xl font-extrabold text-gray-800 tracking-wider">📄 報表精密繪製中</h2>
+                        <p class="text-gray-500 mt-2 font-bold">系統排版中，請勿關閉網頁...</p>
+                    `;
+                    document.body.appendChild(overlay);
+                }
+                overlay.style.display = 'flex';
+
                 const adminSection = document.getElementById('adminSection');
                 const adminBtn = document.getElementById('adminBtn');
                 const mainBody = document.getElementById('mainBody');
                 
-                // 1. 啟動純白、不透明的遮罩，完美遮擋接下來的畫面置換
-                loadingOverlay.classList.remove('hidden', 'bg-white/95', 'backdrop-blur-sm');
-                loadingOverlay.classList.add('flex', 'bg-white');
-                loadingOverlay.style.zIndex = '99999';
-                
-                // 2. 隱藏原有介面
-                adminSection.style.display = 'none';
+                btn.innerHTML = '🔄 PDF 產生準備中...';
+                adminSection.style.display = 'none'; 
                 adminBtn.style.display = 'none';
-
-                // 3. 將網頁背景清白
-                const originalClasses = mainBody.className;
-                mainBody.className = "bg-white m-0 p-0";
-
-                // 🚀 4. 關鍵修復：將 PDF 畫布實體化並強制放置於螢幕最頂端左上角，解除隱藏！
-                // 這是破除全白畫面的唯一解法，瀏覽器才會真正渲染文字
-                pdfContainer.style.display = 'block';
-                pdfContainer.style.visibility = 'visible';
-                pdfContainer.style.position = 'absolute';
-                pdfContainer.style.left = '0px';
-                pdfContainer.style.top = '0px';
-                pdfContainer.style.zIndex = '10'; // 藏在 Loading 下面
                 
+                const originalClasses = mainBody.className; 
+                mainBody.className = "bg-white m-0 p-0";
+                
+                // 🚀 終極還原與強制顯現：
+                // 將畫布設為絕對定位，放置在原點 (0,0)，z-index 在遮罩下方，確保瀏覽器 100% 渲染文字與圖片！
+                pdfContainer.style.display = 'block';
+                pdfContainer.style.position = 'absolute'; 
+                pdfContainer.style.left = '0px'; 
+                pdfContainer.style.top = '0px'; 
+                pdfContainer.style.visibility = 'visible';
+                pdfContainer.style.zIndex = '1';
+
+                // 強制畫面滾到最上面，解決 html2canvas 截圖錯位白屏的元兇
                 window.scrollTo(0, 0);
 
                 setTimeout(() => {
+                    btn.innerHTML = '🔄 系統轉換中，請勿關閉網頁...';
+                    
                     const opt = {
                         margin: 0, 
                         filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
                         image: { type: 'jpeg', quality: 1.0 }, 
-                        html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800, scrollY: 0 }, 
+                        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 }, 
                         jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
                     };
                     
                     html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
                         currentPdfBlob = pdfBlob;
                         currentPdfFileName = `信實集團_職安巡檢日報表_${date}.pdf`;
-                        
-                        // 🚀 5. 轉換成功，還原網頁狀態，將畫布徹底隱藏
-                        pdfContainer.style.display = 'none';
-                        pdfContainer.style.visibility = 'hidden';
-                        pdfContainer.style.left = '-10000px';
 
-                        mainBody.className = originalClasses;
-                        adminSection.style.display = 'block';
+                        // 恢復原狀
+                        pdfContainer.style.position = 'absolute'; 
+                        pdfContainer.style.left = '-10000px'; 
+                        pdfContainer.style.visibility = 'hidden';
+                        mainBody.className = originalClasses; 
+                        adminSection.style.display = 'block'; 
                         adminBtn.style.display = 'block';
+                        overlay.style.display = 'none';
                         
-                        // 將遮罩樣式還原回去並隱藏
-                        loadingOverlay.classList.add('hidden');
-                        loadingOverlay.classList.remove('flex', 'bg-white');
-                        loadingOverlay.classList.add('bg-white/95', 'backdrop-blur-sm');
-                        
-                        btn.innerHTML = '✅ 報表已就緒！點擊這裡 分享 / 下載';
+                        btn.innerHTML = '📤 匯出並分享 PDF 報表';
                         btn.className = "w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg active:scale-95 animate-pulse";
-                        
+
                         triggerShareOrDownload();
                         
                     }).catch(err => {
-                        // 發生例外時的安全還原
-                        pdfContainer.style.display = 'none';
+                        pdfContainer.style.position = 'absolute'; 
+                        pdfContainer.style.left = '-10000px'; 
                         pdfContainer.style.visibility = 'hidden';
-                        pdfContainer.style.left = '-10000px';
-
-                        mainBody.className = originalClasses;
-                        adminSection.style.display = 'block';
+                        mainBody.className = originalClasses; 
+                        adminSection.style.display = 'block'; 
                         adminBtn.style.display = 'block';
-                        
-                        loadingOverlay.classList.add('hidden');
-                        loadingOverlay.classList.remove('flex', 'bg-white');
-                        loadingOverlay.classList.add('bg-white/95', 'backdrop-blur-sm');
-                        alert("產出過程發生錯誤，請稍後重試。");
+                        overlay.style.display = 'none';
+                        btn.innerHTML = '📤 匯出並分享 PDF 報表';
+                        alert("產生失敗，請稍後重試。");
                     });
-                }, 800); 
+                }, 800); // 留 800ms 確保 DOM 完全畫完
             } catch (e) {
                 alert("執行發生例外錯誤：" + e.message);
             }
