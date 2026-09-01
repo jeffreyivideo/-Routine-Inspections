@@ -950,6 +950,7 @@
         }
 
         // 🚀 修復：確保匯出報表的功能邏輯完全順暢
+        // 🚀 修復：確保匯出報表的功能邏輯完全順暢，並攔截電腦版無效的分享視窗
         function downloadAdminReport() {
             const btn = document.getElementById('downloadPdfBtn');
             const adminSection = document.getElementById('adminSection');
@@ -1001,11 +1002,22 @@
                     const fileName = `信實集團_職安巡檢日報表_${date}.pdf`;
                     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    // 🚀 關鍵修正：判斷是否為手機，如果是電腦版，強制直接下載檔案，不開啟 Windows 分享視窗！
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                    if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        // 手機版：開啟原生分享選單
                         navigator.share({ files: [file] }).catch(err => console.log('分享取消或失敗:', err));
                     } else {
-                        const url = URL.createObjectURL(pdfBlob); const a = document.createElement('a');
-                        a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                        // 電腦版：直接觸發檔案下載
+                        const url = URL.createObjectURL(pdfBlob); 
+                        const a = document.createElement('a');
+                        a.href = url; 
+                        a.download = fileName; 
+                        document.body.appendChild(a); 
+                        a.click(); 
+                        document.body.removeChild(a); 
+                        URL.revokeObjectURL(url);
                     }
                 }).catch(err => {
                     pdfContainer.style.display = 'none';
