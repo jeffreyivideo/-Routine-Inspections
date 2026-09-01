@@ -22,8 +22,8 @@
         .show-block { display: block; opacity: 1; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🚀 預設隱藏畫布，產出時由 JS 強制開啟 */
-        #pdfExportContainer { position: absolute; left: -10000px; top: 0; width: 800px; visibility: hidden; background: white; text-align: left; z-index: -1; }
+        /* 🚀 終極修復：回歸最純粹的隱藏方式，不使用 absolute 破壞排版 */
+        #pdfExportContainer { display: none; width: 800px; margin: 0 auto; background: white; text-align: left; }
         .html2pdf__page-break { page-break-before: always !important; margin: 0 !important; border: 0 !important; padding: 0 !important; }
         
         input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: #2563eb; }
@@ -31,7 +31,7 @@
         select option { font-weight: 700; font-size: 1.1rem; }
     </style>
 </head>
-<body id="mainBody" class="app-bg min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-4">
+<body id="mainBody" class="app-bg min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-4 transition-all">
 
     <!-- 全螢幕載入遮罩 -->
     <div id="loadingOverlay" class="fixed inset-0 bg-white/95 backdrop-blur-sm z-[99999] hidden flex-col items-center justify-center">
@@ -319,7 +319,7 @@
                 else if (heatIndex >= 40.6 && heatIndex < 54.4) { heatLevel = "第三級：危險"; heatColor = "text-orange-500"; }
                 else if (heatIndex >= 54.4) { heatLevel = "第四級：極度危險"; heatColor = "text-red-600"; }
 
-                // 🚀 職安法強風標準
+                // 🚀 職安法十分鐘強風標準
                 let windText = `${wind} m/s`;
                 let windStyle = "font-normal";
                 if (wind >= 10) {
@@ -327,7 +327,7 @@
                     windStyle = "font-extrabold text-red-600";
                 }
 
-                // 🚀 熱危害與高溫停工作業警示
+                // 🚀 職安法熱危害與高溫停工作業警示
                 let heatWarningHtml = "";
                 if (heatIndex >= 54.4 || temp >= 34) {
                     heatWarningHtml += `<div class="mt-2 pt-2 border-t border-red-200">`;
@@ -580,7 +580,7 @@
         }
 
         // ==========================================
-        // 🚀 PDF 表頭與接續頁模版 (完美大字體)
+        // 🚀 PDF 表頭與接續頁模版 (完美原汁原味樣式)
         // ==========================================
         const PDF_HEADER_TEMPLATE = `
             <div class="flex items-center justify-center gap-3 pb-2 border-b border-gray-200 mb-3">
@@ -729,7 +729,7 @@
                             
                             let windText = `${w.wind} m/s`;
                             let windStyle = "font-bold";
-                            let pdfWindStyle = "font-bold";
+                            let pdfWindStyle = "font-bold text-gray-800";
                             
                             if (w.wind >= 10) {
                                 windText = `${w.wind} m/s (⚠️ 達強風標準)`;
@@ -809,7 +809,7 @@
                                     <h4 class="font-extrabold text-gray-800 text-lg border-b pb-1 mt-6 mb-4 flex items-center gap-2">📋 安全檢核項目</h4>`;
 
                     // ==========================================
-                    // 🚀 PDF 絕對實體 A4 積木排版
+                    // 🚀 PDF 絕對實體 A4 積木排版 (重現完美原汁原味樣式)
                     // ==========================================
                     const pdfBasicInfo = `
                         <div class="mb-2">
@@ -862,6 +862,7 @@
                         if (note) itemHeight += 15;
                         if (picUrls.length > 0) itemHeight += 75;
 
+                        // 🚀 換頁邏輯：精準切割每一頁的 A4 內容
                         if ((pageCount === 1 && itemCount === 6) || (currentHeight + itemHeight > MAX_PAGE_HEIGHT)) {
                             currentPdfPageHtml += `</div>`; 
                             pdfHtmlPages.push(currentPdfPageHtml);
@@ -959,7 +960,7 @@
             });
         }
 
-        // 🚀 修復：確保匯出報表的功能邏輯完全順暢
+        // 🚀 關鍵防白屏核心：強制置入可視區，不透明 Loading 遮罩阻擋
         function downloadAdminReport() {
             try {
                 if (typeof html2pdf === 'undefined') {
@@ -969,42 +970,32 @@
 
                 const btn = document.getElementById('downloadPdfBtn');
                 
-                // 階段二：如果已經產好，直接彈出分享，秒開絕不卡！
                 if (currentPdfBlob) {
                     triggerShareOrDownload();
                     return;
                 }
 
-                // 階段一：開始畫 PDF
                 const date = document.getElementById('reportDate').value;
                 const pdfContainer = document.getElementById('pdfExportContainer');
                 const loadingOverlay = document.getElementById('loadingOverlay');
-                const mainBody = document.getElementById('mainBody');
+                const adminSection = document.getElementById('adminSection');
+                const adminBtn = document.getElementById('adminBtn');
                 
-                // 1. 顯示全螢幕 Loading，徹底遮擋使用者視線
-                loadingOverlay.classList.remove('hidden');
-                loadingOverlay.classList.add('flex');
+                // 1. 啟動純白、不透明的遮罩，完美遮擋接下來的畫面置換
+                loadingOverlay.classList.remove('hidden', 'bg-white/95', 'backdrop-blur-sm');
+                loadingOverlay.classList.add('flex', 'bg-white');
                 
-                // 2. 隱藏原有的後台介面，避免干擾畫面高度計算
-                document.getElementById('adminSection').style.display = 'none';
-                document.getElementById('adminBtn').style.display = 'none';
+                // 2. 隱藏原有介面
+                adminSection.style.display = 'none';
+                adminBtn.style.display = 'none';
 
-                // 3. 將網頁背景清白
-                const originalClasses = mainBody.className;
-                mainBody.className = "bg-white m-0 p-0";
-
-                // 🚀 4. 終極修復：強制將 PDF 畫布移入螢幕內，並設為完全可見！
+                // 3. 關鍵修復：將 PDF 畫布實體化並置於文件最上方，保證 Tailwind 樣式能正確渲染
                 pdfContainer.style.display = 'block';
-                pdfContainer.style.visibility = 'visible';
-                pdfContainer.style.position = 'relative';
-                pdfContainer.style.left = '0px';
-                pdfContainer.style.margin = '0 auto';
-                
                 window.scrollTo(0, 0);
 
                 setTimeout(() => {
                     const opt = {
-                        margin: 0, 
+                        margin: 0, // 手動切割的 A4 已經內含 padding，此處不需再留邊距
                         filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
                         image: { type: 'jpeg', quality: 1.0 }, 
                         html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800, scrollY: 0 }, 
@@ -1015,18 +1006,15 @@
                         currentPdfBlob = pdfBlob;
                         currentPdfFileName = `信實集團_職安巡檢日報表_${date}.pdf`;
                         
-                        // 🚀 5. 轉換成功，還原網頁狀態與隱藏畫布
+                        // 4. 轉換成功，還原網頁狀態
                         pdfContainer.style.display = 'none';
-                        pdfContainer.style.visibility = 'hidden';
-                        pdfContainer.style.position = 'absolute';
-                        pdfContainer.style.left = '-10000px';
-
-                        mainBody.className = originalClasses;
-                        document.getElementById('adminSection').style.display = 'block';
-                        document.getElementById('adminBtn').style.display = 'block';
+                        adminSection.style.display = 'block';
+                        adminBtn.style.display = 'block';
                         
+                        // 將遮罩樣式還原回去
                         loadingOverlay.classList.add('hidden');
-                        loadingOverlay.classList.remove('flex');
+                        loadingOverlay.classList.remove('flex', 'bg-white');
+                        loadingOverlay.classList.add('bg-white/95', 'backdrop-blur-sm');
                         
                         btn.innerHTML = '✅ 報表已就緒！點擊這裡 分享 / 下載';
                         btn.className = "w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg active:scale-95 animate-pulse";
@@ -1035,15 +1023,11 @@
                         
                     }).catch(err => {
                         pdfContainer.style.display = 'none';
-                        pdfContainer.style.visibility = 'hidden';
-                        pdfContainer.style.position = 'absolute';
-                        pdfContainer.style.left = '-10000px';
-
-                        mainBody.className = originalClasses;
-                        document.getElementById('adminSection').style.display = 'block';
-                        document.getElementById('adminBtn').style.display = 'block';
+                        adminSection.style.display = 'block';
+                        adminBtn.style.display = 'block';
                         loadingOverlay.classList.add('hidden');
-                        loadingOverlay.classList.remove('flex');
+                        loadingOverlay.classList.remove('flex', 'bg-white');
+                        loadingOverlay.classList.add('bg-white/95', 'backdrop-blur-sm');
                         alert("產出過程發生錯誤，請稍後重試。");
                     });
                 }, 800); 
@@ -1061,16 +1045,14 @@
             if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                 navigator.share({ files: [file] }).catch(err => console.log('分享取消或失敗:', err));
             } else {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const a = document.createElement('a');
-                    a.href = e.target.result;
-                    a.download = currentPdfFileName;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                };
-                reader.readAsDataURL(currentPdfBlob);
+                const url = URL.createObjectURL(currentPdfBlob); 
+                const a = document.createElement('a');
+                a.href = url; 
+                a.download = currentPdfFileName; 
+                document.body.appendChild(a); 
+                a.click(); 
+                document.body.removeChild(a); 
+                setTimeout(() => URL.revokeObjectURL(url), 100);
             }
         }
     </script>
