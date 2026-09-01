@@ -22,8 +22,8 @@
         .show-block { display: block; opacity: 1; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🚀 終極 A4 積木設定：強制絕對畫布尺寸，消滅 iOS 自動推擠的 Margin Bug */
-        #pdfExportContainer { position: absolute; left: -10000px; top: 0; width: 800px; visibility: hidden; background: white; text-align: left; z-index: -1; }
+        /* 🚀 修復空白問題：移除 visibility: hidden，改用純粹的位移與 z-index 隱藏 */
+        #pdfExportContainer { position: absolute; left: -10000px; top: 0; width: 800px; background: white; text-align: left; z-index: -10; opacity: 1; display: none; }
         .html2pdf__page-break { page-break-before: always !important; margin: 0 !important; border: 0 !important; padding: 0 !important; }
         
         input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: #2563eb; }
@@ -32,6 +32,12 @@
     </style>
 </head>
 <body id="mainBody" class="app-bg min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-4">
+
+    <!-- 🚀 新增：修復匯出點擊無反應的 Loading 覆蓋層 -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/60 z-[9999] hidden items-center justify-center flex-col backdrop-blur-sm transition-opacity">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white mb-4"></div>
+        <p class="text-white text-xl font-bold tracking-wider">完美報表產生中，請稍候...</p>
+    </div>
 
     <!-- 實體的 PDF 渲染容器 -->
     <div id="pdfExportContainer"></div>
@@ -135,7 +141,6 @@
                 </div>
             </div>
 
-            <!-- 自動氣象與熱危害資訊區塊 -->
             <div id="weatherBlock" class="hidden-smooth flex-col mt-2 bg-blue-50 border border-blue-200 rounded-2xl p-4 shadow-sm">
                 <div class="flex items-center gap-2 mb-3">
                     <h4 class="font-extrabold text-blue-800 text-lg">🌤️ 現場氣象與熱危害資訊</h4>
@@ -292,7 +297,6 @@
             calMonth = today.getMonth();
         }
 
-        // 🚀 天氣與熱危害防護邏輯（加上高溫與強風停工提示）
         async function fetchWeather(lat, lon) {
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FTaipei`);
@@ -309,7 +313,6 @@
                 else if (heatIndex >= 40.6 && heatIndex < 54.4) { heatLevel = "第三級：危險"; heatColor = "text-orange-500"; }
                 else if (heatIndex >= 54.4) { heatLevel = "第四級：極度危險"; heatColor = "text-red-600"; }
 
-                // 🚀 職安法強風標準
                 let windText = `${wind} m/s`;
                 let windStyle = "font-normal";
                 if (wind >= 10) {
@@ -317,7 +320,6 @@
                     windStyle = "font-extrabold text-red-600";
                 }
 
-                // 🚀 熱危害與高溫停工作業警示
                 let heatWarningHtml = "";
                 if (heatIndex >= 54.4 || temp >= 34) {
                     heatWarningHtml += `<div class="mt-2 pt-2 border-t border-red-200">`;
@@ -363,7 +365,6 @@
             }
         }
 
-        // 🚀 強力防斷流連線模組：自動重試避免 4G 瞬斷
         function fetchWithRetry(url, retries = 2) {
             return fetch(url, { redirect: 'follow', cache: 'no-store' })
                 .then(res => {
@@ -727,7 +728,6 @@
                                 pdfWindStyle = "font-extrabold text-red-600";
                             }
 
-                            // 🚀 報表產出時同步加上熱危害與高溫停工作業警示
                             let heatWarningHtmlWeb = "";
                             let heatWarningHtmlPdf = "";
                             if (w.heatIndex >= 54.4 || w.temp >= 34) {
@@ -949,6 +949,7 @@
             });
         }
 
+        // 🚀 修復：確保匯出報表的功能邏輯完全順暢
         function downloadAdminReport() {
             const btn = document.getElementById('downloadPdfBtn');
             const adminSection = document.getElementById('adminSection');
@@ -957,6 +958,7 @@
             const mainBody = document.getElementById('mainBody');
             const loadingOverlay = document.getElementById('loadingOverlay');
             
+            // 顯示準備畫面
             loadingOverlay.classList.remove('hidden');
             loadingOverlay.classList.add('flex');
 
@@ -966,8 +968,8 @@
             const originalClasses = mainBody.className;
             mainBody.className = "bg-white m-0 p-0";
 
+            // 短暫將容器設置為可視，供 html2canvas 捕捉
             pdfContainer.style.display = 'block';
-            
             window.scrollTo(0, 0);
 
             setTimeout(() => {
@@ -988,6 +990,7 @@
                 };
                 
                 html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
+                    // 還原畫面
                     pdfContainer.style.display = 'none';
                     mainBody.className = originalClasses;
                     document.getElementById('adminSection').style.display = 'block';
