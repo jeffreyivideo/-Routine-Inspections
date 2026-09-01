@@ -962,84 +962,78 @@
 
         // 🚀 關鍵防白屏核心：強制置入可視區，不透明 Loading 遮罩阻擋
         function downloadAdminReport() {
-            try {
-                if (typeof html2pdf === 'undefined') {
-                    alert("⚠️ PDF 轉換引擎尚未載入，請確認網路連線或重新整理網頁！");
-                    return;
-                }
-
-                const btn = document.getElementById('downloadPdfBtn');
-                
-                if (currentPdfBlob) {
-                    triggerShareOrDownload();
-                    return;
-                }
-
-                const date = document.getElementById('reportDate').value;
-                const pdfContainer = document.getElementById('pdfExportContainer');
-                const loadingOverlay = document.getElementById('loadingOverlay');
-                const adminSection = document.getElementById('adminSection');
-                const adminBtn = document.getElementById('adminBtn');
-                
-                // 1. 啟動純白、不透明的遮罩，完美遮擋接下來的畫面置換
-                loadingOverlay.classList.remove('hidden', 'bg-white/95', 'backdrop-blur-sm');
-                loadingOverlay.classList.add('flex', 'bg-white');
-                
-                // 2. 隱藏原有介面
-                adminSection.style.display = 'none';
-                adminBtn.style.display = 'none';
-
-                // 3. 關鍵修復：將 PDF 畫布實體化並置於文件最上方，保證 Tailwind 樣式能正確渲染
-                pdfContainer.style.display = 'block';
-                window.scrollTo(0, 0);
-
-                setTimeout(() => {
-                    const opt = {
-                        margin: 0, // 手動切割的 A4 已經內含 padding，此處不需再留邊距
-                        filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
-                        image: { type: 'jpeg', quality: 1.0 }, 
-                        html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800, scrollY: 0 }, 
-                        jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
-                    };
-                    
-                    html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
-                        currentPdfBlob = pdfBlob;
-                        currentPdfFileName = `信實集團_職安巡檢日報表_${date}.pdf`;
-                        
-                        // 4. 轉換成功，還原網頁狀態
-                        pdfContainer.style.display = 'none';
-                        adminSection.style.display = 'block';
-                        adminBtn.style.display = 'block';
-                        
-                        // 將遮罩樣式還原回去
-                        loadingOverlay.classList.add('hidden');
-                        loadingOverlay.classList.remove('flex', 'bg-white');
-                        loadingOverlay.classList.add('bg-white/95', 'backdrop-blur-sm');
-                        
-                        btn.innerHTML = '✅ 報表已就緒！點擊這裡 分享 / 下載';
-                        btn.className = "w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg active:scale-95 animate-pulse";
-                        
-                        triggerShareOrDownload();
-                        
-                    }).catch(err => {
-                        pdfContainer.style.display = 'none';
-                        adminSection.style.display = 'block';
-                        adminBtn.style.display = 'block';
-                        loadingOverlay.classList.add('hidden');
-                        loadingOverlay.classList.remove('flex', 'bg-white');
-                        loadingOverlay.classList.add('bg-white/95', 'backdrop-blur-sm');
-                        alert("產出過程發生錯誤，請稍後重試。");
-                    });
-                }, 800); 
-            } catch (e) {
-                alert("執行發生例外錯誤：" + e.message);
+            const btn = document.getElementById('downloadPdfBtn');
+            
+            // 如果已經產出過，直接呼叫下載/分享
+            if (currentPdfBlob) {
+                triggerShareOrDownload();
+                return;
             }
+
+            const date = document.getElementById('reportDate').value;
+            const pdfContainer = document.getElementById('pdfExportContainer');
+            const mainBody = document.getElementById('mainBody');
+            const adminSection = document.getElementById('adminSection');
+            const adminBtn = document.getElementById('adminBtn');
+            
+            btn.innerHTML = '🔄 PDF 產生準備中...';
+            adminSection.style.display = 'none'; 
+            adminBtn.style.display = 'none';
+            
+            // 🚀 還原您最完美的渲染邏輯：不用 display: none，而是移到視窗外並解除隱藏，確保文字完整著色！
+            const originalClasses = mainBody.className; 
+            mainBody.className = "bg-white m-0 p-0";
+            pdfContainer.style.position = 'absolute'; 
+            pdfContainer.style.left = '-2000px'; 
+            pdfContainer.style.top = '0'; 
+            pdfContainer.style.visibility = 'visible';
+
+            setTimeout(() => {
+                btn.innerHTML = '🔄 系統轉換中，請勿關閉網頁...';
+                
+                // 完全使用您成功產生完美排版的原始 PDF 設定
+                const opt = {
+                    margin: 0, 
+                    filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
+                    image: { type: 'jpeg', quality: 1.0 }, 
+                    html2canvas: { scale: 2, useCORS: true, logging: false }, 
+                    jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
+                };
+                
+                html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
+                    currentPdfBlob = pdfBlob;
+                    currentPdfFileName = `信實集團_職安巡檢日報表_${date}.pdf`;
+
+                    // 轉換完畢後恢復原狀，把畫布藏回去
+                    pdfContainer.style.position = 'absolute'; 
+                    pdfContainer.style.left = '-10000px'; 
+                    pdfContainer.style.visibility = 'hidden';
+                    mainBody.className = originalClasses; 
+                    adminSection.style.display = 'block'; 
+                    adminBtn.style.display = 'block';
+                    
+                    btn.innerHTML = '✅ 報表已就緒！點擊這裡 分享 / 下載';
+                    btn.className = "w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg active:scale-95 animate-pulse";
+
+                    triggerShareOrDownload();
+                    
+                }).catch(err => {
+                    pdfContainer.style.position = 'absolute'; 
+                    pdfContainer.style.left = '-10000px'; 
+                    pdfContainer.style.visibility = 'hidden';
+                    mainBody.className = originalClasses; 
+                    adminSection.style.display = 'block'; 
+                    adminBtn.style.display = 'block';
+                    btn.innerHTML = '📤 匯出並分享 PDF 報表';
+                    alert("產生失敗，請稍後重試。");
+                });
+            }, 600); 
         }
 
         function triggerShareOrDownload() {
             const file = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' });
             
-            // 判斷是否為手機，電腦版直接下載不開分享視窗
+            // 🚀 加入裝置判斷：手機彈出分享選單，電腦版直接下載檔案！
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
             if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
