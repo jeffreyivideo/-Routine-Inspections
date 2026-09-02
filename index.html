@@ -22,9 +22,9 @@
         .show-block { display: block; opacity: 1; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 🚀 終極防白屏設定：拔除 margin auto，強制靠左 margin: 0，防止手機版產生負座標導致截圖全白！ */
-        #pdfExportContainer { display: none; width: 800px; margin: 0; padding: 0; position: relative; background: white; text-align: left; }
-        .html2pdf__page-break { page-break-before: always !important; margin: 0 !important; border: 0 !important; padding: 0 !important; }
+        /* 🚀 終極防白屏設定：不使用 absolute 浮空，使用標準 display: none，確保切換時撐開真實網頁高度！ */
+        #pdfExportContainer { display: none; width: 800px; margin: 0; padding: 0; background: white; text-align: left; }
+        .html2pdf__page-break { page-break-after: always !important; height: 0 !important; margin: 0 !important; border: 0 !important; padding: 0 !important; }
         
         input[type="radio"] { width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: #2563eb; }
         select optgroup { font-weight: 900; font-size: 1.25rem; }
@@ -33,7 +33,7 @@
 </head>
 <body id="mainBody" class="app-bg min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-4 transition-all">
 
-    <!-- 🚀 全白 Loading 遮罩：擋住背景 PDF 展開時的視覺跳動 -->
+    <!-- 🚀 全螢幕載入遮罩：改為純白底色，完美蓋住背後的實體渲染過程 -->
     <div id="loadingOverlay" class="fixed inset-0 bg-white z-[99999] hidden flex-col items-center justify-center">
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
         <h2 class="text-2xl font-extrabold text-gray-800 tracking-wider">📄 報表精密繪製中</h2>
@@ -589,7 +589,7 @@
                     webHtml += `<div class="mb-8 border border-gray-300 rounded-xl shadow-sm bg-white p-4 sm:p-6"><div class="flex items-center justify-center gap-4 pb-4 border-b border-gray-200 mb-6"><img src="https://lh3.googleusercontent.com/d/1EGg_mHTfjhqscarvitDCKKAqWN7eLFSl" class="h-8 object-contain" crossorigin="anonymous"><h3 class="font-bold text-2xl text-gray-800 tracking-wider">現場職安巡檢日報表</h3></div>${webBasicInfo}${webMapHtml}<h4 class="font-extrabold text-gray-800 text-lg border-b pb-1 mt-6 mb-4 flex items-center gap-2">📋 安全檢核項目</h4>`;
 
                     // ==========================================
-                    // 🚀 PDF 絕對實體 A4 積木排版 (去除 margin 避免手機跑位)
+                    // 🚀 PDF 絕對實體 A4 積木排版 (重現完美原汁原味樣式)
                     // ==========================================
                     const pdfBasicInfo = `
                         <div style="margin-bottom: 20px;">
@@ -612,8 +612,8 @@
                             ${qrCodeImg ? `<img src="${qrCodeImg}" style="width: 70px; height: 70px; mix-blend-mode: multiply;" crossorigin="anonymous">` : ''}
                         </div>`;
 
-                    // 💡 注意：在此移除 margin: 0 auto; 改為 margin: 0;
-                    let currentPdfPageHtml = `<div style="width: 800px; height: 1131px; padding: 40px 50px; box-sizing: border-box; background: white; font-family: sans-serif; color: #1f2937; position: relative; margin: 0;">` + PDF_HEADER_TEMPLATE + pdfBasicInfo + pdfMapBlock + `<h4 style="font-size: 16px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">📋 安全檢核項目明細：</h4>`;
+                    // 💡 注意：在此移除 overflow: hidden 避免 html2canvas 裁切渲染 Bug
+                    let currentPdfPageHtml = `<div style="width: 800px; height: 1131px; padding: 40px 50px; box-sizing: border-box; background: white; font-family: sans-serif; color: #1f2937; position: relative; margin: 0 auto;">` + PDF_HEADER_TEMPLATE + pdfBasicInfo + pdfMapBlock + `<h4 style="font-size: 16px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">📋 安全檢核項目明細：</h4>`;
                     
                     let itemCount = 0;
                     let pageCount = 1;
@@ -645,7 +645,7 @@
                             currentPdfPageHtml += `</div>`; 
                             pdfHtmlPages.push(currentPdfPageHtml);
                             
-                            currentPdfPageHtml = `<div style="width: 800px; height: 1131px; padding: 40px 50px; box-sizing: border-box; background: white; font-family: sans-serif; color: #1f2937; position: relative; margin: 0;">` + PDF_HEADER_CONTINUED;
+                            currentPdfPageHtml = `<div style="width: 800px; height: 1131px; padding: 40px 50px; box-sizing: border-box; background: white; font-family: sans-serif; color: #1f2937; position: relative; margin: 0 auto;">` + PDF_HEADER_CONTINUED;
                             currentHeight = 90; 
                             itemCount = 0;
                             pageCount++;
@@ -702,7 +702,7 @@
                     if (currentHeight + footerPhotosHeight + signatureHeight > MAX_PAGE_HEIGHT) {
                         currentPdfPageHtml += `</div>`;
                         pdfHtmlPages.push(currentPdfPageHtml);
-                        currentPdfPageHtml = `<div style="width: 800px; height: 1131px; padding: 40px 50px; box-sizing: border-box; background: white; font-family: sans-serif; color: #1f2937; position: relative; margin: 0;">` + PDF_HEADER_CONTINUED;
+                        currentPdfPageHtml = `<div style="width: 800px; height: 1131px; padding: 40px 50px; box-sizing: border-box; background: white; font-family: sans-serif; color: #1f2937; position: relative; margin: 0 auto;">` + PDF_HEADER_CONTINUED;
                     }
 
                     let pdfFooterBlock = `
@@ -745,7 +745,7 @@
             });
         }
 
-        // 🚀 關鍵防白屏核心：強制置入可視區左上角(0,0)，撐開高度，徹底避免 html2canvas 抓空
+        // 🚀 關鍵防白屏核心：強制置入可視區，用標準區塊撐開高度，徹底避免 html2canvas 抓空
         function downloadAdminReport() {
             try {
                 if (typeof html2pdf === 'undefined') {
@@ -778,12 +778,16 @@
 
                 // 3. 將 Body 背景清白，去除所有 padding 與 flex 設定，回歸標準 document flow
                 const originalClasses = mainBody.className;
-                mainBody.className = "bg-white m-0 p-0 text-left overflow-visible block";
+                mainBody.className = "bg-white m-0 p-0 block";
+                mainBody.style.overflow = 'visible'; // 確保本體可以被撐開
 
-                // 🚀 4. 關鍵修復：讓 PDF 容器以標準的 block 顯示，真實佔據並撐開網頁高度！
+                // 🚀 4. 終極修復：將畫布設為 static，回到標準排版流，撐開網頁真實高度！
                 pdfContainer.style.display = 'block';
-                
-                // 強制捲動到最頂部，對齊 (0,0)
+                pdfContainer.style.visibility = 'visible';
+                pdfContainer.style.position = 'static'; // <--- 最關鍵：取消絕對定位
+                pdfContainer.style.left = 'auto';
+                pdfContainer.style.top = 'auto';
+
                 window.scrollTo(0, 0);
 
                 setTimeout(() => {
@@ -793,50 +797,55 @@
                         margin: 0, 
                         filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
                         image: { type: 'jpeg', quality: 1.0 }, 
-                        html2canvas: { 
-                            scale: 2, 
-                            useCORS: true, 
-                            logging: false, 
-                            windowWidth: 800, 
-                            width: 800, 
-                            x: 0, 
-                            y: 0, 
-                            scrollY: 0 
-                        }, 
-                        jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' },
-                        pagebreak: { mode: 'css', after: '.html2pdf__page-break' }
+                        html2canvas: {
+                            scale: 2,
+                            useCORS: true,
+                            logging: false,
+                            scrollY: 0
+                        },
+                        jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
                     };
                     
                     html2pdf().set(opt).from(pdfContainer).outputPdf('blob').then(function(pdfBlob) {
                         currentPdfBlob = pdfBlob;
                         currentPdfFileName = `信實集團_職安巡檢日報表_${date}.pdf`;
 
-                        // 🚀 5. 轉換成功，將 PDF 容器隱藏
+                        // 還原
                         pdfContainer.style.display = 'none';
+                        pdfContainer.style.position = 'absolute';
+                        pdfContainer.style.visibility = 'hidden';
+                        pdfContainer.style.left = '-10000px';
 
-                        // 還原所有 UI 狀態
                         mainBody.className = originalClasses;
+                        mainBody.style.overflow = '';
                         adminSection.style.display = 'block';
                         if (adminBtn) adminBtn.style.display = 'block';
                         
                         loadingOverlay.classList.add('hidden');
                         loadingOverlay.classList.remove('flex');
-                        
+
                         btn.innerHTML = '📤 匯出並分享 PDF 報表';
                         btn.className = "w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg active:scale-95 animate-pulse";
 
                         triggerShareOrDownload();
                         
                     }).catch(err => {
+                        // 還原
                         pdfContainer.style.display = 'none';
+                        pdfContainer.style.position = 'absolute';
+                        pdfContainer.style.visibility = 'hidden';
+                        pdfContainer.style.left = '-10000px';
+
                         mainBody.className = originalClasses;
+                        mainBody.style.overflow = '';
                         adminSection.style.display = 'block';
                         if (adminBtn) adminBtn.style.display = 'block';
+
                         loadingOverlay.classList.add('hidden');
                         loadingOverlay.classList.remove('flex');
                         alert("產出過程發生錯誤，請稍後重試。");
                     });
-                }, 1000); // 留 1 秒讓字體與 DOM 完全佈局完畢
+                }, 800); 
             } catch (e) {
                 alert("執行發生例外錯誤：" + e.message);
             }
