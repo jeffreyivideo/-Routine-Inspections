@@ -330,8 +330,8 @@
                 const base64Image = generalPhotosList[0].split(',')[1];
                 const promptText = "你是一位嚴格的機場職安督導與人因工程專家。請檢查這張現場作業照片：1. 【個人防護具】：人員是否有穿戴反光背心、安全帽等必要護具？ 2. 【墜落預防】：若有梯子或高空作業，是否有防滑或防墜措施？ 3. 【人因工程】：工作姿勢是否有不當（如過度彎腰）？ 4. 【環境整潔】：周遭動線是否有絆倒風險？請用繁體中文條列式回答，發現問題標示『⚠️』並給予改善建議，狀況良好標示『✅』。";
 
-                // 先嘗試呼叫標準版模型
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                // 🚀 關鍵升級：直接指定清單中確認可用的次世代模型 gemini-2.5-flash
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -346,27 +346,9 @@
 
                 const data = await response.json();
                 
-                // 🚨 攔截錯誤並啟動深度診斷
+                // 🚨 攔截 API 錯誤
                 if (data.error) {
-                    if (data.error.code === 404) {
-                        resultText.innerHTML = `<span class="text-orange-600 animate-pulse font-bold">⚠️ 找不到預設模型，正在啟動 Google 伺服器深度診斷...</span>`;
-                        
-                        // 強制反查這把金鑰到底能用什麼模型
-                        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-                        const listData = await listRes.json();
-                        
-                        if (listData.models) {
-                            // 過濾出真正支援生成內容的模型名稱
-                            const availableModels = listData.models
-                                .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
-                                .map(m => m.name.replace('models/', ''))
-                                .join('<br> • ');
-                                
-                            resultText.innerHTML = `<span class="text-red-600 font-bold">❌ 您的金鑰權限受到 Google 限制。<br><br>🔍 Google 伺服器回報這把金鑰【實際可用】的模型清單如下：<br> • ${availableModels || '無可用模型'}<br><br>💡 請將這個畫面截圖給我，我會立刻幫您對接到可用的清單上！</span>`;
-                        } else {
-                            resultText.innerHTML = `<span class="text-red-600 font-bold">❌ 伺服器拒絕回報可用清單，請確認金鑰是否正確，或嘗試重新申請一把。</span>`;
-                        }
-                    } else if (data.error.code === 400 || data.error.code === 403 || data.error.status === 'PERMISSION_DENIED') {
+                    if (data.error.code === 400 || data.error.code === 403 || data.error.status === 'PERMISSION_DENIED') {
                         localStorage.removeItem('GEMINI_API_KEY'); 
                         resultText.innerHTML = `<span class="text-red-600 font-bold">❌ API 金鑰無效或已被限制，請重新整理網頁後點擊以輸入新金鑰。</span>`;
                     } else {
