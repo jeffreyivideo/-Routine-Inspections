@@ -865,6 +865,7 @@
         }
 
         // 🚀 關鍵防白屏核心：顯示遮罩，拉回可視區，擷取，藏回可視區外
+        // 🚀 關鍵防白屏核心：強制置入左上角，移除 x, y 硬性綁定，讓引擎自動對焦抓取
         function downloadAdminReport() {
             try {
                 if (typeof html2pdf === 'undefined') {
@@ -873,7 +874,6 @@
                 }
 
                 const btn = document.getElementById('downloadPdfBtn');
-                
                 if (currentPdfBlob) {
                     triggerShareOrDownload();
                     return;
@@ -886,38 +886,46 @@
                 const adminBtn = document.getElementById('adminBtn');
                 const mainBody = document.getElementById('mainBody');
                 
-                // 1. 顯示純白 Loading 遮罩
+                // 1. 啟動不透明的白色 Loading 遮罩
                 loadingOverlay.classList.remove('hidden');
                 loadingOverlay.classList.add('flex');
                 
-                btn.innerHTML = '🔄 PDF 產生準備中...';
+                // 2. 徹底隱藏原有介面
                 adminSection.style.display = 'none';
                 if (adminBtn) adminBtn.style.display = 'none';
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('formSection').style.display = 'none';
 
+                // 3. 將 Body 背景清白，去除所有 padding 與 flex 設定
                 const originalClasses = mainBody.className;
                 mainBody.className = "bg-white m-0 p-0 block";
+                document.documentElement.style.overflow = 'visible';
+                mainBody.style.overflow = 'visible';
 
-                // 🚀 將畫布實體化並拉回座標 0, 0
+                // 🚀 4. 終極修復：將畫布強制釘在螢幕最左上角，確保相機第一眼就看到它
                 pdfContainer.style.display = 'block';
+                pdfContainer.style.visibility = 'visible';
                 pdfContainer.style.position = 'absolute';
                 pdfContainer.style.left = '0px';
                 pdfContainer.style.top = '0px';
-                pdfContainer.style.zIndex = '1'; // 確保在遮罩下面
+                pdfContainer.style.zIndex = '10'; // 確保藏在 Loading 遮罩底下
 
                 window.scrollTo(0, 0);
 
                 setTimeout(() => {
+                    btn.innerHTML = '🔄 系統轉換中，請勿關閉網頁...';
+                    
                     const opt = {
                         margin: 0, 
                         filename: `信實集團_職安巡檢日報表_${date}.pdf`, 
                         image: { type: 'jpeg', quality: 1.0 }, 
-                        html2canvas: { 
-                            scale: 2, 
-                            useCORS: true, 
-                            logging: false, 
-                            windowWidth: 800,
-                            scrollY: 0 
-                        }, 
+                        html2canvas: {
+                            scale: 2,
+                            useCORS: true,
+                            logging: false,
+                            scrollY: 0
+                            // ❌ 已經徹底刪除 x, y, windowHeight 等硬性干擾參數，讓系統自動捕捉
+                        },
                         jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
                     };
                     
@@ -925,33 +933,44 @@
                         currentPdfBlob = pdfBlob;
                         currentPdfFileName = `信實集團_職安巡檢日報表_${date}.pdf`;
 
-                        // 畫完後藏回去
+                        // 還原
                         pdfContainer.style.display = 'none';
+                        pdfContainer.style.position = 'absolute';
+                        pdfContainer.style.visibility = 'hidden';
                         pdfContainer.style.left = '-10000px';
 
                         mainBody.className = originalClasses;
+                        document.documentElement.style.overflow = '';
+                        mainBody.style.overflow = '';
                         adminSection.style.display = 'block';
                         if (adminBtn) adminBtn.style.display = 'block';
-
+                        
                         loadingOverlay.classList.add('hidden');
                         loadingOverlay.classList.remove('flex');
-                        
-                        btn.innerHTML = '✅ 報表已就緒！點擊這裡 分享 / 下載';
+
+                        btn.innerHTML = '📤 匯出並分享 PDF 報表';
                         btn.className = "w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg active:scale-95 animate-pulse";
 
                         triggerShareOrDownload();
+                        
                     }).catch(err => {
+                        // 還原
                         pdfContainer.style.display = 'none';
+                        pdfContainer.style.position = 'absolute';
+                        pdfContainer.style.visibility = 'hidden';
                         pdfContainer.style.left = '-10000px';
+
                         mainBody.className = originalClasses;
+                        document.documentElement.style.overflow = '';
+                        mainBody.style.overflow = '';
                         adminSection.style.display = 'block';
                         if (adminBtn) adminBtn.style.display = 'block';
-                        
+
                         loadingOverlay.classList.add('hidden');
                         loadingOverlay.classList.remove('flex');
                         alert("產出過程發生錯誤，請稍後重試。");
                     });
-                }, 800); 
+                }, 1000); 
             } catch (e) {
                 alert("執行發生例外錯誤：" + e.message);
             }
